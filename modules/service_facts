@@ -1,0 +1,85 @@
+#  What is service_facts?
+# It gathers details about services (systemd, upstart, sysvinit depending on OS).
+# Stores results in the special fact variable: ansible_facts.services
+# You can then query which services are running, stopped, enabled, disabled, etc.
+
+# 🔹 Data Structure Example
+# After running service_facts, you’ll have something like:
+
+ansible_facts:
+  services:
+    sshd.service:
+      state: running
+      status: enabled
+    cron.service:
+      state: running
+      status: enabled
+    nginx.service:
+      state: stopped
+      status: disabled
+
+# 🔹 Example 1 – Gather and Print All Services
+- name: Collect and display service facts
+  hosts: all
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Show all service facts
+      debug:
+        var: ansible_facts.services
+
+
+# ✅ This will dump the entire list of services with states and enabled status.
+
+# 🔹 Example 2 – Check If a Service is Running
+- name: Check SSHD service
+  hosts: all
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Ensure sshd is running
+      debug:
+        msg: "SSHD is running!"
+      when: ansible_facts.services['sshd.service'].state == "running"
+
+
+# ✅ Prints the message only if sshd is active.
+
+# 🔹 Example 3 – Restart a Service If It’s Stopped
+- name: Restart stopped services
+  hosts: all
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Restart nginx if stopped
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+      when: ansible_facts.services['nginx.service'].state != "running"
+
+
+# ✅ Restarts nginx only if it’s not already running.
+
+# 🔹 Example 4 – List All Running Services
+- name: List running services
+  hosts: all
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Show running services
+      debug:
+        msg: "{{ item.key }} is running"
+      loop: "{{ ansible_facts.services | dict2items }}"
+      when: item.value.state == "running"
+
+
+# ✅ Loops through all services and prints only the ones running.
+
+# 🔑 When to use service_facts?
+# For compliance checks (e.g., “Is firewall running on all servers?”).
+# Before performing restarts, upgrades, or patches.
+# To dynamically adapt playbooks based on service states.
