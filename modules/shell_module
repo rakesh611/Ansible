@@ -1,0 +1,217 @@
+#       🔹 shell Module – Explanation
+
+# Purpose:
+# Executes shell commands on target systems using the default shell (/bin/sh on Linux/Unix).
+# Difference from command module:
+# command: Runs commands directly (no shell processing, no redirection, no pipes, no &&).
+# shell: Runs commands through a shell → supports pipes, redirects, variables, wildcards.
+# 👉 Use command when possible (safer), and shell when you need shell features.
+# 🔹 Common Use Cases
+# Run commands with pipes: cat file | grep something
+# Run commands with redirection: echo "line" >> /etc/file
+# Run environment variable expansions
+
+#          Execute complex one-liners
+
+# 🔹 Example Playbooks
+# 1. Simple Shell Command
+- name: Run uptime command using shell
+  hosts: all
+  tasks:
+    - name: Get uptime
+      ansible.builtin.shell: uptime
+      register: uptime_output
+
+    - name: Show uptime result
+      ansible.builtin.debug:
+        msg: "{{ uptime_output.stdout }}"
+
+# 2. Using Pipes and Redirection
+- name: Count number of users in /etc/passwd
+  hosts: all
+  tasks:
+    - name: Run shell with pipes
+      ansible.builtin.shell: cat /etc/passwd | wc -l
+      register: user_count
+
+    - name: Show user count
+      ansible.builtin.debug:
+        msg: "Number of users: {{ user_count.stdout }}"
+
+# 3. Append a Line to a File
+- name: Add a line using shell redirection
+  hosts: all
+  tasks:
+    - name: Append text to file
+      ansible.builtin.shell: echo "Backup completed on $(date)" >> /var/log/backup_status.log
+
+# 4. Using chdir and creates
+- name: Extract tar file only if not already extracted
+  hosts: all
+  tasks:
+    - name: Extract archive
+      ansible.builtin.shell: tar -xzf app.tar.gz
+      args:
+        chdir: /opt/myapp
+        creates: /opt/myapp/app
+
+
+# 🔹 Here:
+# chdir: Run command inside /opt/myapp
+# creates: Skip if /opt/myapp/app already exists (idempotency).
+
+#  5. Run a Multi-Line Script
+- name: Run a multi-line shell script
+  hosts: all
+  tasks:
+    - name: Execute script
+      ansible.builtin.shell: |
+        echo "Starting deployment"
+        systemctl stop myapp
+        cp /tmp/new_app /usr/local/bin/myapp
+        systemctl start myapp
+
+#  🔹 Best Practices
+# ✅ Prefer command module unless you need shell features.
+# ✅ Use args: creates or removes to keep playbook idempotent.
+# ✅ Be careful with user input → shell injection risk.
+# ✅ Always register results if you need output.
+
+#            🔹 Using Variables with shell
+# You can insert Ansible variables directly into shell commands using Jinja2 {{ variable }} syntax.
+
+# Example 1 – Run a shell command using a variable
+- name: Run shell command with a variable
+  hosts: all
+  vars:
+    logfile: /var/log/myapp.log
+  tasks:
+    - name: Count lines in log file
+      ansible.builtin.shell: "wc -l {{ logfile }}"
+      register: log_count
+
+    - name: Show log line count
+      ansible.builtin.debug:
+        msg: "Log file {{ logfile }} has {{ log_count.stdout }} lines"
+
+# Example 2 – Using a variable with environment expansion
+- name: Run command with environment variable
+  hosts: all
+  vars:
+    username: "rakesh"
+  tasks:
+    - name: Show home directory of user
+      ansible.builtin.shell: "echo $HOME"
+      become: yes
+      become_user: "{{ username }}"
+      register: home_dir
+
+    - debug:
+        msg: "User {{ username }} home dir: {{ home_dir.stdout }}"
+
+# 🔹 Using Loops with shell
+# You can loop over a list of commands or files and run them with shell.
+# Example 3 – Loop through multiple shell commands
+- name: Run multiple shell commands in a loop
+  hosts: all
+  tasks:
+    - name: Run commands
+      ansible.builtin.shell: "{{ item }}"
+      loop:
+        - "uptime"
+        - "df -h"
+        - "free -m"
+      register: results
+
+    - name: Show outputs
+      ansible.builtin.debug:
+        msg: "{{ item.stdout }}"
+      loop: "{{ results.results }}"
+
+
+# 👉 Each command result is available in results.results.
+
+# Example 4 – Loop through files and get word counts
+- name: Word count of multiple files
+  hosts: all
+  vars:
+    files:
+      - /etc/passwd
+      - /etc/hosts
+  tasks:
+    - name: Count words in files
+      ansible.builtin.shell: "wc -l {{ item }}"
+      loop: "{{ files }}"
+      register: file_counts
+
+    - name: Show results
+      ansible.builtin.debug:
+        msg: "File {{ item.item }} has {{ item.stdout }} lines"
+      loop: "{{ file_counts.results }}"
+
+#      🔹 Pro Tips for shell
+# ✅ Use loop for multiple commands/files.
+# ✅ Always register when you need to use the output.
+# ✅ For idempotent behavior, add args: creates or removes.
+# ✅ Be careful with variable injection into shell (avoid user-provided values without sanitization).
+
+# Let’s build a real-world automation example using the shell module with variables + loops:
+# We’ll make a playbook that:
+# Checks if important services (like nginx, sshd, docker) are running.
+# If any service is down, restart it.
+# Store results in a local log for auditing.
+
+# 🔹 Playbook: check_services.yml
+---
+- name: Check and restart critical services if down
+  hosts: all
+  become: yes
+  vars:
+    services:
+      - nginx
+      - sshd
+      - docker
+
+  tasks:
+    - name: Check service status
+      ansible.builtin.shell: "systemctl is-active {{ item }}"
+      loop: "{{ services }}"
+      register: service_status
+      ignore_errors: yes   # continue even if service is not running
+
+    - name: Restart services that are not active
+      ansible.builtin.shell: "systemctl restart {{ item.item }}"
+      loop: "{{ service_status.results }}"
+      when: item.stdout != "active"
+      register: restarted_services
+      ignore_errors: yes
+
+    - name: Log restarted services to local file
+      delegate_to: localhost
+      copy:
+        content: |
+          Host: {{ inventory_hostname }}
+          Restarted Services: {{ restarted_services.results | map(attribute='item.item') | list }}
+        dest: "./logs/{{ inventory_hostname }}-restarted.log"
+      when: restarted_services is defined
+
+# 🔹 How It Works
+# Check Service Status → Runs systemctl is-active for each service in the list.
+# Restart If Down → If not active, restart the service.
+# Log Results → Saves which services were restarted into a per-host log file.
+
+# 🔹 Example Output (on Controller)
+logs/
+├── server1-restarted.log
+├── server2-restarted.log
+
+
+# Contents of server1-restarted.log:
+
+Host: server1
+Restarted Services: ['nginx']
+
+
+# ✅ Ensures critical services stay running.
+# ✅ Loops + variables make it scalable.
+# ✅ Logs make it auditable.
