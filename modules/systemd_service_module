@@ -1,0 +1,107 @@
+#        🔹 systemd_service Module – Explanation
+# Purpose: Manage systemd units (services, timers, sockets, mounts, etc.).
+# Why use it?
+# Works with systemd v230+.
+# Allows creating, modifying, enabling, starting, reloading, and stopping services.
+# Can handle transient units (temporary services/timers).
+# Safer and more flexible than the older service or systemd modules.
+
+#           🔹 Key Parameters
+# name: Name of the systemd unit (e.g., nginx.service).
+# state: Desired state:
+# started, stopped, restarted, reloaded
+# enabled: yes / no → Enable service on boot.
+# masked: yes / no → Prevent service from being started manually or automatically.
+# daemon_reload: yes → Reload systemd daemon after making changes.
+# scope: system (default), user, or global.
+# transient: Define temporary (in-memory) unit files without writing to disk.
+# unit: Full unit file definition (YAML dict) when creating transient services/timers.
+
+#           🔹 Example Playbooks
+# 1. Start and Enable a Service
+---
+- name: Ensure nginx is running and enabled
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Start and enable nginx
+      ansible.builtin.systemd_service:
+        name: nginx.service
+        state: started
+        enabled: yes
+
+
+#          👉 Ensures nginx is started now and enabled on boot.
+# 2. Stop and Disable a Service
+- name: Stop and disable Apache
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Stop and disable httpd
+      ansible.builtin.systemd_service:
+        name: httpd.service
+        state: stopped
+        enabled: no
+
+# 3. Restart a Service After Config Change
+- name: Restart ssh after config update
+  hosts: all
+  become: yes
+  tasks:
+    - name: Restart sshd
+      ansible.builtin.systemd_service:
+        name: sshd.service
+        state: restarted
+
+# 4. Mask a Service (Prevent Use)
+- name: Mask telnet service (security hardening)
+  hosts: all
+  become: yes
+  tasks:
+    - name: Mask telnet
+      ansible.builtin.systemd_service:
+        name: telnet.service
+        masked: yes
+
+
+# 👉 telnet cannot be started even manually with systemctl start.
+
+# 5. Reload Systemd Daemon After Adding Unit Files
+- name: Reload systemd after adding new service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Copy custom service file
+      ansible.builtin.copy:
+        src: myapp.service
+        dest: /etc/systemd/system/myapp.service
+        mode: '0644'
+
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: yes
+
+    - name: Start custom service
+      ansible.builtin.systemd_service:
+        name: myapp.service
+        state: started
+        enabled: yes
+
+# 6. Create a Transient Service (Temporary, In-Memory)
+- name: Run one-time job as transient service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Start a transient unit
+      ansible.builtin.systemd_service:
+        name: mytemp.service
+        transient: yes
+        unit:
+          Service:
+            ExecStart: "/usr/bin/echo Hello from transient service"
+            Type: oneshot
+
+
+# 👉 Runs a temporary unit that won’t persist after reboot.
+
+
