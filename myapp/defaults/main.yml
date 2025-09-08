@@ -1,0 +1,4 @@
+app_root: /opt/myapp
+app_user: myapp
+app_group: myapp
+

@@ -1,0 +1,11 @@
+---
+- name: Deploy custom app with systemd
+  hosts: appservers
+  become: yes
+  roles:
+    - role: myapp
+      vars:
+        app_root: /opt/myapp
+        app_user: myapp
+        app_group: myapp
+
