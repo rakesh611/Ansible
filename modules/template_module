@@ -1,0 +1,126 @@
+#         🔹 template Module – Explanation
+
+# Purpose:
+# Copies a Jinja2 template from the control node to the target host, while rendering variables dynamically.
+#Common Uses:
+# Deploy configuration files (nginx.conf, httpd.conf, my.cnf, etc.)
+# Replace static config files with dynamic ones using host-specific variables
+# Apply conditional logic inside configuration files
+
+#      🔹 Key Parameters
+# src: Path to the Jinja2 template file on the control node (usually in templates/ folder of a role).
+# dest: Destination path on the remote host where the rendered file should be placed.
+# owner, group, mode: File ownership and permissions.
+# backup: yes to backup existing file before replacing it.
+# force: yes (default) to overwrite even if content is the same.
+
+#       🔹 Example Playbooks
+# 1. Simple Template Deployment
+templates/nginx.conf.j2:
+
+server {
+    listen {{ web_port }};
+    server_name {{ server_name }};
+
+    location / {
+        root {{ document_root }};
+        index index.html;
+    }
+}
+
+
+#       Playbook:
+
+---
+- name: Deploy Nginx config
+  hosts: webservers
+  become: yes
+  vars:
+    web_port: 80
+    server_name: example.com
+    document_root: /var/www/html
+  tasks:
+    - name: Copy Nginx config from template
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+
+# 👉 Renders the template using variables and copies it to /etc/nginx/nginx.conf.
+
+# 2. Template with Conditional Logic
+
+templates/app.conf.j2:
+
+[app]
+port = {{ app_port }}
+{% if enable_ssl %}
+ssl = yes
+{% else %}
+ssl = no
+{% endif %}
+
+
+# Playbook:
+
+- name: Deploy app configuration
+  hosts: all
+  become: yes
+  vars:
+    app_port: 8080
+    enable_ssl: true
+  tasks:
+    - name: Copy app config
+      ansible.builtin.template:
+        src: app.conf.j2
+        dest: /etc/myapp/app.conf
+
+
+# ✅ If enable_ssl: true, the generated file will contain ssl = yes.
+# 3. Template in a Role
+
+Role folder structure:
+
+roles/
+└── myapp/
+    ├── templates/
+    │   └── config.j2
+    ├── tasks/
+    │   └── main.yml
+
+
+roles/myapp/tasks/main.yml:
+
+- name: Deploy app config from template
+  ansible.builtin.template:
+    src: config.j2
+    dest: /etc/myapp/app.conf
+    owner: myapp
+    group: myapp
+    mode: '0644'
+
+
+# Usage in Playbook:
+
+- hosts: all
+  roles:
+    - role: myapp
+      vars:
+        app_port: 8080
+        enable_ssl: false
+
+# 4. Template with Backup
+- name: Copy config with backup
+  hosts: all
+  tasks:
+    - name: Deploy template safely
+      ansible.builtin.template:
+        src: myapp.conf.j2
+        dest: /etc/myapp/app.conf
+        backup: yes
+
+
+# ✅ Automatically creates /etc/myapp/app.conf.<timestamp> before overwriting.
