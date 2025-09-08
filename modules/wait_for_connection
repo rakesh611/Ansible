@@ -1,0 +1,53 @@
+####Purpose:-
+#This module pauses playbook execution until the remote host becomes available over SSH (or WinRM on Windows).
+####Useful after:
+# Rebooting a server
+
+# Creating a new VM/instance
+
+# Restarting a service that affects connectivity
+# Key Parameters:
+#delay: Seconds to wait before first attempt (default 0)
+
+# timeout: Max time (in seconds) to wait (default 300)
+
+# sleep: Interval between retries (default 1)
+
+# connect_timeout: Timeout for each SSH attempt (default 5)
+
+
+
+####################Basic Usage
+---
+- name: Wait until server is reachable
+  hosts: all
+  tasks:
+    - name: Wait for SSH connection
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+#################After Reboot
+---
+- name: Reboot and wait for connection
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot server
+      ansible.builtin.reboot:
+        msg: "Rebooting to apply updates"
+        connect_timeout: 5
+        reboot_timeout: 600
+
+    - name: Wait until the system is reachable again
+      ansible.builtin.wait_for_connection:
+        delay: 10        # wait 10s before first check
+        timeout: 300     # keep trying for 5 mins
+        sleep: 5         # check every 5s
+###################Provisioning a Fresh VM
+---
+- name: Provision new VM and wait until ready
+  hosts: new_vm
+  tasks:
+    - name: Wait for SSH connectivity on new VM
+      ansible.builtin.wait_for_connection:
+        timeout: 180
+
