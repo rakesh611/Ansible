@@ -1,0 +1,72 @@
+##########    Purpose:
+#   Unlike wait_for_connection (which only checks SSH/WinRM availability), wait_for waits for arbitrary conditions such as:
+# A port being open/closed
+# A file existing or being removed
+# A string appearing in a file
+# A timeout (pause for X seconds)
+
+###########  Key Parameters:
+# host: Host to check (default = inventory host)
+# port: TCP port to check
+# state: started (open), stopped (closed), present (file exists), absent (file missing)
+# path: Path of file/socket to check
+# search_regex: String/regex that must appear in file
+# delay: Seconds to wait before first check
+# timeout: Max time to wait (default 300s)
+# sleep: Interval between checks
+
+
+#############    Wait for Port 22 (SSH)
+---
+- name: Wait for SSH to be ready
+  hosts: all
+  tasks:
+    - name: Wait until port 22 is open
+      ansible.builtin.wait_for:
+        port: 22
+        state: started
+        delay: 5
+        timeout: 60
+
+
+#########     Wait for Web Server on Port 80
+---
+- name: Wait for Apache to start
+  hosts: webservers
+  tasks:
+    - name: Ensure port 80 is open
+      ansible.builtin.wait_for:
+        port: 80
+        state: started
+        timeout: 120
+
+
+############     Wait for a File to Exist
+---
+- name: Wait for a file to be created
+  hosts: all
+  tasks:
+    - name: Wait until log file exists
+      ansible.builtin.wait_for:
+        path: /var/log/myapp/ready.log
+        state: present
+        timeout: 300
+##########    Wait for a String in File
+---
+- name: Wait until service logs a READY message
+  hosts: all
+  tasks:
+    - name: Check for READY string in log file
+      ansible.builtin.wait_for:
+        path: /var/log/myapp/service.log
+        search_regex: "READY"
+        timeout: 180
+##############    Simple Sleep/Pause
+---
+- name: Pause execution for 30 seconds
+  hosts: all
+  tasks:
+    - name: Wait for 30 seconds
+      ansible.builtin.wait_for:
+        timeout: 30
+
