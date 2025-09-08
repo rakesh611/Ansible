@@ -1,0 +1,111 @@
+#       🔹 uri Module – Explanation
+# Purpose: Send HTTP/HTTPS requests to web services or REST APIs.
+# Common Uses:
+# Check website availability (health checks)
+# Interact with REST APIs (GET, POST, PUT, DELETE)
+# Download data (JSON, XML, text)
+# Send authentication headers, tokens, etc.
+
+#      🔹 Key Parameters
+# url: Target URL (required).
+# method: HTTP method → GET, POST, PUT, DELETE, PATCH, etc.
+# headers: Custom HTTP headers (e.g., Authorization).
+# body: Request body (for POST/PUT/PATCH).
+# body_format: Format of body → json, form-urlencoded, raw.
+# status_code: Expected response codes (default = 200).
+# return_content: If yes, stores the response in a variable.
+# timeout: Wait time in seconds before failing.
+# validate_certs: Set no if dealing with self-signed SSL.
+
+#        🔹 Example Playbooks
+# 1. Basic Website Health Check
+---
+- name: Check if website is up
+  hosts: localhost
+  tasks:
+    - name: GET request to example.com
+      ansible.builtin.uri:
+        url: https://www.example.com
+        method: GET
+        status_code: 200
+
+
+#            👉 Ensures site returns HTTP 200 OK.
+# 2. Store Response Content
+---
+- name: Fetch API data
+  hosts: localhost
+  tasks:
+    - name: Get JSON response
+      ansible.builtin.uri:
+        url: https://jsonplaceholder.typicode.com/posts/1
+        method: GET
+        return_content: yes
+      register: api_response
+
+    - name: Print API response
+      ansible.builtin.debug:
+        var: api_response.json
+
+
+#      👉 Stores the JSON response and prints it.
+# 3. POST Request with JSON Body
+---
+- name: Send data to API
+  hosts: localhost
+  tasks:
+    - name: Create new post via API
+      ansible.builtin.uri:
+        url: https://jsonplaceholder.typicode.com/posts
+        method: POST
+        body_format: json
+        body:
+          title: "Ansible Post"
+          body: "This is created using Ansible"
+          userId: 1
+        headers:
+          Content-Type: "application/json"
+        return_content: yes
+      register: post_response
+
+    - name: Show server response
+      ansible.builtin.debug:
+        var: post_response.json
+
+
+#         👉 Sends JSON payload and shows created resource details.
+# 4. API Authentication with Token
+---
+- name: Access API with token
+  hosts: localhost
+  tasks:
+    - name: GET data with Authorization header
+      ansible.builtin.uri:
+        url: https://api.example.com/data
+        method: GET
+        headers:
+          Authorization: "Bearer my_secret_token"
+        return_content: yes
+      register: secured_response
+
+    - name: Show response
+      ansible.builtin.debug:
+        var: secured_response.json
+
+
+#       👉 Useful for APIs requiring OAuth2/JWT tokens.
+# 5. Validate Multiple Status Codes
+---
+- name: Handle redirect
+  hosts: localhost
+  tasks:
+    - name: Allow 200 or 302 response
+      ansible.builtin.uri:
+        url: https://example.com/redirect
+        method: GET
+        status_code:
+          - 200
+          - 302
+
+
+# 👉 Accepts 200 OK or 302 Found.
