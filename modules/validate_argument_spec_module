@@ -1,0 +1,72 @@
+############  🔹 validate_argument_spec Module – Explanation
+
+######### Purpose:
+# This module is not used in normal playbooks.
+# Instead, it’s meant for role developers who want to validate input variables (arguments) passed into their role.
+# It helps ensure that when someone uses your role, they provide the correct:
+# Type of variable (string, int, list, dict, etc.)
+# Required values
+# Choices from a defined set
+# Default values
+# Think of it as a schema validator for role variables.
+# 🔹 Key Parameters
+# Inside a role, you define argument_spec like:
+# type: Type of the variable (str, int, list, dict, bool, path, etc.)
+# required: Whether the variable must be provided
+# choices: Allowed values
+# default: Default value if not supplied
+# 🔹 Example – Role Argument Validation
+# Suppose we are writing a role webserver.
+# We want to enforce:
+# web_port must be an integer and required
+# web_server must be nginx or apache
+# document_root must be a string path with default /var/www/html
+# roles/webserver/meta/argument_specs.yml
+
+argument_specs:
+  main:
+    short_description: "Install and configure webserver"
+    options:
+      web_port:
+        type: int
+        required: true
+        description: "Port on which the web server will listen"
+      web_server:
+        type: str
+        required: true
+        choices: ["nginx", "apache"]
+        description: "Type of web server"
+      document_root:
+        type: path
+        default: "/var/www/html"
+        description: "Root directory for web content"
+#############   🔹 Example Playbook Using the Role
+---
+- name: Deploy Web Server
+  hosts: webservers
+  roles:
+    - role: webserver
+      vars:
+        web_port: 8080
+        web_server: nginx
+# ✅ If you forget web_port or set it as "eighty" (string instead of int),
+# Ansible will throw a validation error before running any tasks.
+# 🔹 Direct Playbook Example (rare but possible)
+# While typically used in roles, you can directly use it in a playbook too:
+---
+- name: Validate role arguments
+  hosts: localhost
+  tasks:
+    - name: Validate arguments
+      ansible.builtin.validate_argument_spec:
+        argument_spec:
+          my_number:
+            type: int
+            required: true
+          my_choice:
+            type: str
+            choices: ["start", "stop", "restart"]
+        provided_arguments:
+          my_number: 10
+          my_choice: start
+# 👉 If my_number was missing or my_choice was "pause", the playbook would fail immediately.
