@@ -1,0 +1,45 @@
+---
+- name: Compliance check and auto-fix for critical services
+  hosts: all
+  become: yes
+
+  vars:
+    critical_services:
+      - sshd
+      - firewalld
+      - docker
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Ensure critical packages are installed
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ critical_services }}"
+      register: pkg_result
+      ignore_errors: yes
+
+    - name: Ensure critical services are started and enabled
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: "{{ critical_services }}"
+      register: svc_result
+      ignore_errors: yes
+
+    - name: Report compliance status after fixes
+      vars:
+        svc_state: "{{ ansible_facts.services[item + '.service'] | default({'state': 'not detected'}) }}"
+      debug:
+        msg: >
+          Service {{ item }} final state: {{ svc_state.state }} on {{ inventory_hostname }}
+      loop: "{{ critical_services }}"
+
+    - name: Save compliance results
+      ansible.builtin.set_stats:
+        data:
+          compliance_autofix: "{{ svc_result.results | map(attribute='item') | list }}"
+
