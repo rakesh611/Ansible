@@ -1,0 +1,45 @@
+---
+- name: Add RPM keys and configure YUM repositories
+  hosts: all
+  become: yes
+
+  vars:
+    repos:
+      - name: epel
+        baseurl: "https://download.fedoraproject.org/pub/epel/$releasever/$basearch/"
+        gpgkey: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-$releasever"
+      - name: myrepo
+        baseurl: "http://myrepo.example.com/centos/$releasever/os/$basearch/"
+        gpgkey: "/home/ansible/RPM-GPG-KEY-myrepo"
+
+  tasks:
+    - name: Add RPM GPG keys
+      ansible.builtin.rpm_key:
+        state: present
+        key: "{{ item.gpgkey }}"
+        validate_certs: yes
+      loop: "{{ repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Configure YUM repositories
+      ansible.builtin.yum_repository:
+        name: "{{ item.name }}"
+        description: "{{ item.name | capitalize }} Repository"
+        baseurl: "{{ item.baseurl }}"
+        gpgcheck: yes
+        gpgkey: "{{ item.gpgkey }}"
+        enabled: yes
+      loop: "{{ repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Verify repositories added
+      ansible.builtin.command: yum repolist
+      register: repolist
+      changed_when: false
+
+    - name: Show added repositories
+      debug:
+        msg: "{{ repolist.stdout }}"
+
