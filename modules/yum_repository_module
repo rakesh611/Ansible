@@ -1,0 +1,41 @@
+######Add EPEL Repository
+---
+- name: Configure EPEL repo on CentOS/RHEL
+  hosts: centos_servers
+  become: yes
+  tasks:
+    - name: Add EPEL repository
+      ansible.builtin.yum_repository:
+        name: epel
+        description: Extra Packages for Enterprise Linux
+        baseurl: https://download.fedoraproject.org/pub/epel/$releasever/Everything/$basearch
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-$releasever
+        state: present
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-$releasever
+        state: present
+#✅ This will create /etc/yum.repos.d/epel.repo file.
+#######Disable a Repository
+---
+- name: Disable AppStream repo
+  hosts: centos_servers
+  become: yes
+  tasks:
+    - name: Disable AppStream repo
+      ansible.builtin.yum_repository:
+        name: AppStream
+        enabled: no
+#####Remove a Repository
+---
+- name: Remove a custom repository
+  hosts: centos_servers
+  become: yes
+  tasks:
+    - name: Remove repo
+      ansible.builtin.yum_repository:
+        name: my-custom-repo
+        state: absent
+
