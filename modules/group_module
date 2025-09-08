@@ -1,0 +1,89 @@
+#    🔹 group Module – Explanation
+# Purpose: Manage local groups on Linux/Unix systems.
+# What it can do:
+# Create new groups
+# Delete groups
+# Modify existing groups (change GID, add system group)
+#     🔹 Key Parameters
+# name: Group name (required)
+# state:
+# present → Ensure group exists
+# absent → Remove group
+# gid: Group ID (GID)
+# system: Create as a system group (GID < 1000 on most distros)
+#   🔹 Example Playbooks
+# 1. Create a New Group
+---
+- name: Create a developers group
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add group "developers"
+      ansible.builtin.group:
+        name: developers
+        state: present
+
+
+#     👉 Creates a group named developers.
+# 2. Create a System Group
+---
+- name: Create a system group
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add system group "jenkins"
+      ansible.builtin.group:
+        name: jenkins
+        system: yes
+
+
+#     👉 Creates a system group called jenkins.
+# 3. Create Group with Specific GID
+---
+- name: Create group with GID
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add group with GID 1500
+      ansible.builtin.group:
+        name: qa
+        gid: 1500
+        state: present
+
+
+#      👉 Creates group qa with GID 1500.
+# 4. Remove a Group
+---
+- name: Remove a group
+  hosts: all
+  become: yes
+  tasks:
+    - name: Delete group "oldgroup"
+      ansible.builtin.group:
+        name: oldgroup
+        state: absent
+
+
+#      👉 Removes oldgroup from the system.
+# 🔹 Combining user + group
+# A common use case is to create a group, then create a user and assign them to that group:
+
+---
+- name: Create user with primary and secondary groups
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure group "developers" exists
+      ansible.builtin.group:
+        name: developers
+        state: present
+
+    - name: Create user "alice" in developers group
+      ansible.builtin.user:
+        name: alice
+        groups: developers,sudo
+        append: yes
+        shell: /bin/bash
+
+
+# 👉 This ensures group developers exists before creating user alice and adding her to it.
