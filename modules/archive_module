@@ -1,0 +1,90 @@
+#          🔹 archive Module – Explanation
+# Purpose: Create compressed archive files (.tar, .tar.gz, .zip, etc.) on the remote host.
+#        Key Features:
+
+# Can compress multiple files or directories.
+# Supports formats: tar, gz, bz2, xz, zip.
+# Useful for backups, packaging configs, log rotation, or migration.
+
+#        🔹 Key Parameters
+# path: List of files/directories to include in archive.
+# dest: Destination path of the archive file (must end in .tar, .tar.gz, .zip, etc.).
+# format: Archive format (tar, gz, bz2, xz, zip).
+# remove: If yes, removes the source files after creating archive (like tar --remove-files).
+# force_archive: Ensures archive is always re-created.
+#         🔹 Example Playbooks
+# 1. Create a Tarball from Directory
+---
+- name: Create a tar archive of logs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Archive /var/log into /tmp/logs.tar.gz
+      ansible.builtin.archive:
+        path: /var/log
+        dest: /tmp/logs.tar.gz
+        format: gz
+
+
+#          👉 Compresses /var/log into /tmp/logs.tar.gz.
+# 2. Archive Multiple Files and Directories
+---
+- name: Archive multiple paths
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create archive of configs and logs
+      ansible.builtin.archive:
+        path:
+          - /etc/hosts
+          - /etc/ssh/sshd_config
+          - /var/log
+        dest: /tmp/system_backup.tar
+        format: tar
+
+
+#          👉 Backs up multiple paths into one .tar.
+# 3. Create and Remove Source Files
+---
+- name: Compress and remove sources
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create archive and delete source files
+      ansible.builtin.archive:
+        path: /opt/tempdata
+        dest: /tmp/tempdata_backup.tar.gz
+        format: gz
+        remove: yes
+
+
+#         👉 Archives /opt/tempdata and deletes the original folder.
+# 4. Force Recreate Archive Each Run
+---
+- name: Always recreate archive
+  hosts: all
+  become: yes
+  tasks:
+    - name: Recreate tarball of /etc
+      ansible.builtin.archive:
+        path: /etc
+        dest: /tmp/etc_backup.tar.gz
+        format: gz
+        force_archive: yes
+
+
+#          👉 Ensures archive is always newly created, even if unchanged.
+# 5. Real-World Example – Backup Before Deployment
+---
+- name: Backup website before deployment
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Backup /var/www/html
+      ansible.builtin.archive:
+        path: /var/www/html
+        dest: /opt/backups/html_backup_{{ ansible_date_time.date }}.tar.gz
+        format: gz
+
+
+# 👉 Creates a daily backup of web content before deploying new code.
