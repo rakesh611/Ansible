@@ -1,0 +1,48 @@
+---
+- name: Ensure critical services are running and enabled
+  hosts: all
+  become: yes
+
+  vars:
+    critical_services:
+      - sshd
+      - firewalld
+      - docker
+      - nginx
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Ensure critical packages are installed (if needed)
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ critical_services }}"
+      register: pkg_result
+      ignore_errors: yes
+
+    - name: Start and enable critical services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: "{{ critical_services }}"
+      register: svc_result
+      ignore_errors: yes
+
+    - name: Report final service status
+      debug:
+        msg: >
+          Service {{ item }} on {{ inventory_hostname }} 
+          is now {{ ansible_facts.services[item + '.service'].state | default('not detected') }}
+      loop: "{{ critical_services }}"
+
+    - name: Save managed services as facts for later reporting
+      ansible.builtin.set_fact:
+        managed_services: "{{ svc_result.results | map(attribute='item') | list }}"
+
+    - name: Display managed services
+      debug:
+        msg: "Managed services on {{ inventory_hostname }}: {{ managed_services }}"
+
