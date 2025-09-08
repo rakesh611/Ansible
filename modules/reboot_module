@@ -1,0 +1,69 @@
+🔹 What is the reboot module?
+The reboot module is used to reboot remote hosts safely.
+Handles waiting for the system to go down and come back online.
+Can be combined with timeouts and delays to ensure idempotency in automation scripts.
+Useful after kernel updates, configuration changes, or package upgrades.
+
+🔹 Common Options
+| Option              | Description                                                           |
+| ------------------- | --------------------------------------------------------------------- |
+| `msg`               | Message to log before rebooting                                       |
+| `connect_timeout`   | Timeout (in seconds) to wait for SSH to reconnect                     |
+| `reboot_timeout`    | Total time (in seconds) to wait for the host to come back online      |
+| `pre_reboot_delay`  | Wait time before initiating reboot                                    |
+| `post_reboot_delay` | Wait time after host comes online before continuing                   |
+| `test_command`      | Command to run to confirm the host is back online (default: `whoami`) |
+
+🔹 Example 1 – Simple Reboot
+- name: Reboot remote host
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot the machine
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible for maintenance"
+        reboot_timeout: 600
+
+
+✅ Reboots the host and waits up to 10 minutes for it to come back online.
+
+🔹 Example 2 – Reboot with Pre and Post Delay
+- name: Reboot with delay
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot after delay
+      ansible.builtin.reboot:
+        msg: "Reboot for kernel upgrade"
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+        reboot_timeout: 600
+
+✅ Waits 10 seconds before reboot, and 30 seconds after the host is reachable before continuing tasks.
+
+🔹 Example 3 – Reboot Only If Needed
+- name: Reboot after kernel upgrade
+  hosts: all
+  become: yes
+  tasks:
+    - name: Upgrade kernel
+      ansible.builtin.yum:
+        name: kernel
+        state: latest
+      register: kernel_upgrade
+
+    - name: Reboot if kernel upgraded
+      ansible.builtin.reboot:
+        msg: "Reboot required after kernel upgrade"
+        reboot_timeout: 600
+      when: kernel_upgrade.changed
+
+🔹 Real-World Use Cases
+
+After package or kernel updates.
+
+After major configuration changes (like network or security settings).
+
+Automation pipelines that require a fresh system state.
+
+Can be combined with wait_for_connection to ensure the host is ready before next tasks.
