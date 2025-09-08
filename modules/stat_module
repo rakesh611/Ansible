@@ -1,0 +1,99 @@
+#           🔹 stat Module – Explanation
+
+# Purpose:
+# Retrieves metadata about files and directories on the remote host.
+# Common Uses:
+# Check if a file/directory exists before executing tasks.
+# Validate permissions, ownership, and type.
+# Get file size, modification time, and checksum.
+# Use conditions (when) based on file status.
+
+#            🔹 Key Return Values
+# When you run stat, the result is stored in a variable (usually registered). Common attributes include:
+# exists: Whether the file exists (true/false).
+# isdir: Is it a directory?
+# isreg: Is it a regular file?
+# size: File size in bytes.
+# mode: Permissions in octal (e.g., 0644).
+# uid, gid: File owner/group IDs.
+# pw_name, gr_name: File owner/group names.
+# mtime: Last modification time (epoch).
+# checksum: Checksum of the file (if requested).
+
+#         🔹 Example Playbooks
+# 1. Check if a File Exists
+---
+- name: Check if /etc/passwd exists
+  hosts: all
+  tasks:
+    - name: Get file status
+      ansible.builtin.stat:
+        path: /etc/passwd
+      register: passwd_stat
+
+    - name: Debug file existence
+      ansible.builtin.debug:
+        msg: "The file exists!"
+      when: passwd_stat.stat.exists
+
+
+#         👉 Prints message only if /etc/passwd exists.
+# 2. Check if a Directory Exists
+- name: Check if /var/log is a directory
+  hosts: all
+  tasks:
+    - name: Get directory status
+      ansible.builtin.stat:
+        path: /var/log
+      register: log_stat
+
+    - name: Show debug info
+      ansible.builtin.debug:
+        msg: "/var/log is a directory"
+      when: log_stat.stat.isdir
+
+# 3. Use File Permissions in Condition
+- name: Verify SSH config permissions
+  hosts: all
+  tasks:
+    - name: Stat sshd_config
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_stat
+
+    - name: Fail if permissions are insecure
+      ansible.builtin.fail:
+        msg: "sshd_config has insecure permissions!"
+      when: sshd_stat.stat.mode != "0600"
+
+
+#         👉 Fails if sshd_config is not 0600.
+# 4. Use stat Before Copying a File
+- name: Copy file only if it doesn’t exist
+  hosts: all
+  tasks:
+    - name: Check if config exists
+      ansible.builtin.stat:
+        path: /etc/myapp/config.yml
+      register: config_stat
+
+    - name: Copy config file
+      ansible.builtin.copy:
+        src: config.yml
+        dest: /etc/myapp/config.yml
+      when: not config_stat.stat.exists
+
+# 5. Get File Checksum
+- name: Compute checksum of /etc/hosts
+  hosts: all
+  tasks:
+    - name: Get checksum
+      ansible.builtin.stat:
+        path: /etc/hosts
+        checksum_algorithm: md5
+      register: hosts_stat
+
+    - name: Show checksum
+      ansible.builtin.debug:
+        msg: "Checksum is {{ hosts_stat.stat.checksum }}"
+
