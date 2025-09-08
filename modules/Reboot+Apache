@@ -1,0 +1,31 @@
+---
+- name: Reboot and wait for service
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 5
+        post_reboot_delay: 10
+
+    - name: Wait for SSH connection to return
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 120
+
+    - name: Wait until Apache (port 80) is up
+      ansible.builtin.wait_for:
+        port: 80
+        state: started
+        timeout: 180
+
+    - name: Verify Apache service
+      ansible.builtin.service_facts:
+
+    - name: Show Apache status
+      ansible.builtin.debug:
+        msg: "Apache is running: {{ ansible_facts.services['httpd.service'].state }}"
+
