@@ -1,5 +1,5 @@
 ---
-- name: Add RPM keys and configure YUM repositories
+- name: Idempotent RPM key and YUM repository setup
   hosts: all
   become: yes
 
@@ -13,7 +13,12 @@
         gpgkey: "/home/ansible/RPM-GPG-KEY-myrepo"
 
   tasks:
-    - name: Add RPM GPG keys
+    - name: Gather existing RPM keys
+      ansible.builtin.command: rpm -qa gpg-pubkey --qf "%{NAME}-%{VERSION}-%{RELEASE}\n"
+      register: existing_keys
+      changed_when: false
+
+    - name: Add RPM GPG key if not present
       ansible.builtin.rpm_key:
         state: present
         key: "{{ item.gpgkey }}"
@@ -21,6 +26,8 @@
       loop: "{{ repos }}"
       loop_control:
         label: "{{ item.name }}"
+      when: >
+        (item.gpgkey | basename | lower) not in existing_keys.stdout | lower
 
     - name: Configure YUM repositories
       ansible.builtin.yum_repository:
