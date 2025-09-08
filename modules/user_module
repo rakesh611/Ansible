@@ -1,0 +1,100 @@
+#    🔹 user Module – Explanation
+# Purpose: Manage user accounts on target systems (Linux/Unix).
+# What it can do:
+# Create new users
+# Delete users
+# Modify existing users
+# Set passwords, groups, home directories, shells
+# Manage account expiry
+#      🔹 Key Parameters
+# name: Username (required)
+# state: present (default) to create, absent to remove
+# uid: User ID
+# group: Primary group
+# groups: Supplementary groups (comma-separated or list)
+# password: Encrypted password (use mkpasswd or openssl passwd)
+# shell: Login shell (e.g., /bin/bash)
+# home: Home directory path
+# create_home: yes/no – whether to create home directory
+# comment: Full name / description (GECOS field)
+# expires: Account expiry time (epoch timestamp or -1 for never)
+# remove: When state=absent, remove home directory and mail spool
+
+#        🔹 Example Playbooks
+# 1. Create a User
+---
+- name: Create a new user
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add user "john"
+      ansible.builtin.user:
+        name: john
+        comment: "John Doe"
+        shell: /bin/bash
+        groups: "developers,sudo"
+        append: yes
+        create_home: yes
+
+
+# 👉 Creates user john with /bin/bash shell, home directory, and adds to developers + sudo groups.
+
+# 2. Create a User with Password
+---
+- name: Create user with password
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add user with password
+      ansible.builtin.user:
+        name: alice
+        password: "{{ 'MyP@ssw0rd' | password_hash('sha512') }}"
+        shell: /bin/bash
+
+
+# 👉 Password gets hashed automatically before storing.
+# 3. Delete a User
+---
+- name: Remove user
+  hosts: all
+  become: yes
+  tasks:
+    - name: Delete user "testuser"
+      ansible.builtin.user:
+        name: testuser
+        state: absent
+        remove: yes
+
+
+# 👉 Removes testuser and deletes home directory.
+# 4. Set User Expiry
+---
+- name: Create user with expiry
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add temporary user
+      ansible.builtin.user:
+        name: tempuser
+        expires: "{{ (ansible_date_time.epoch | int) + 604800 }}"
+
+
+# 👉 Creates a tempuser that expires after 7 days (604800 seconds).
+# 5. Modify an Existing User
+---
+- name: Change user shell
+  hosts: all
+  become: yes
+  tasks:
+    - name: Set shell for "john"
+      ansible.builtin.user:
+        name: john
+        shell: /bin/zsh
+
+
+# 👉 Updates John’s shell to /bin/zsh.
+#   🔹 When to Use
+# Creating system users during server provisioning
+# Ensuring required service accounts exist (e.g., jenkins, nginx)
+# Managing temporary access with expiry
+# Automating user lifecycle management
