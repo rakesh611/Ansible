@@ -1,0 +1,8 @@
+---
+- name: Collect configs and logs from all servers
+  hosts: all
+  gather_facts: false
+
+  roles:
+    - collect
+

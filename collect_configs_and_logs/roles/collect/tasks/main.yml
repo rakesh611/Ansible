@@ -1,0 +1,51 @@
+---
+# ========== CONFIG FILES ==========
+- name: Slurp /etc/hosts
+  ansible.builtin.slurp:
+    src: /etc/hosts
+  register: etc_hosts
+
+- name: Save /etc/hosts locally
+  delegate_to: localhost
+  copy:
+    content: "{{ etc_hosts.content | b64decode }}"
+    dest: "./collected/{{ inventory_hostname }}/etc_hosts.txt"
+
+- name: Slurp /etc/passwd
+  ansible.builtin.slurp:
+    src: /etc/passwd
+  register: etc_passwd
+
+- name: Save /etc/passwd locally
+  delegate_to: localhost
+  copy:
+    content: "{{ etc_passwd.content | b64decode }}"
+    dest: "./collected/{{ inventory_hostname }}/etc_passwd.txt"
+
+# ========== LOG FILES ==========
+- name: Slurp /var/log/messages (RHEL/CentOS)
+  ansible.builtin.slurp:
+    src: /var/log/messages
+  register: sys_messages
+  ignore_errors: true   # Some systems (like Ubuntu) may not have it
+
+- name: Save messages log locally
+  delegate_to: localhost
+  when: sys_messages is defined and sys_messages.content is defined
+  copy:
+    content: "{{ sys_messages.content | b64decode }}"
+    dest: "./collected/{{ inventory_hostname }}/messages.log"
+
+- name: Slurp /var/log/syslog (Debian/Ubuntu)
+  ansible.builtin.slurp:
+    src: /var/log/syslog
+  register: sys_syslog
+  ignore_errors: true   # Some systems (like CentOS) may not have it
+
+- name: Save syslog locally
+  delegate_to: localhost
+  when: sys_syslog is defined and sys_syslog.content is defined
+  copy:
+    content: "{{ sys_syslog.content | b64decode }}"
+    dest: "./collected/{{ inventory_hostname }}/syslog.log"
+
