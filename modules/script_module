@@ -1,0 +1,71 @@
+#      🔹 What is the script module?
+# The script module is used to run a local script on a remote host.
+# The script is copied from the control node to the remote host and then executed.
+# Useful when you have pre-written scripts (Bash, Python, PowerShell) that you want to run without rewriting them in Ansible tasks.
+# Only works for scripts stored locally; does not work with inline code.
+
+# 🔹 Common Options
+| Option         | Description                                                     |
+| -------------- | --------------------------------------------------------------- |
+| `cmd` / `path` | Path to the local script on the control node                    |
+| `args`         | Arguments to pass to the script                                 |
+| `chdir`        | Directory on remote host where script should be executed        |
+| `creates`      | Skip execution if a file exists on the remote host              |
+| `executable`   | Path to the interpreter (e.g., `/bin/bash`, `/usr/bin/python3`) |
+
+# 🔹 Example 1 – Run a Local Bash Script
+# Assume you have a local script: myscript.sh
+
+#!/bin/bash
+echo "Hello from remote host $(hostname)"
+
+
+# Playbook:
+
+- name: Run a local script on remote host
+  hosts: all
+  become: yes
+  tasks:
+    - name: Execute local script
+      ansible.builtin.script: /home/ansible/myscript.sh
+
+
+# ✅ Output on remote host:
+
+# Hello from remote host web01
+
+# 🔹 Example 2 – Pass Arguments to Script
+#!/bin/bash
+echo "Hello $1, today is $2"
+
+
+# Playbook:
+
+- name: Run script with arguments
+  hosts: all
+  tasks:
+    - name: Execute local script with args
+      ansible.builtin.script:
+        cmd: /home/ansible/myscript.sh
+        argv:
+          - "Rakesh"
+          - "{{ ansible_date_time.date }}"
+
+
+# ✅ Output:
+
+# Hello Rakesh, today is 2025-09-08
+
+# 🔹 Example 3 – Run Script in a Specific Directory
+- name: Run script in /tmp
+  hosts: all
+  tasks:
+    - name: Execute script in /tmp
+      ansible.builtin.script:
+        cmd: /home/ansible/myscript.sh
+        chdir: /tmp
+
+# 🔹 Key Notes
+# The script is copied to a temporary location on the remote host, executed, then deleted.
+# Ideal for existing scripts that cannot be converted into Ansible tasks easily.
+# For more complex automation, prefer converting scripts to Ansible tasks for idempotency.
