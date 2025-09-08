@@ -1,0 +1,89 @@
+#       🔹 setup Module – Explanation
+
+# Purpose:
+# The setup module gathers facts about the remote system.
+# These facts are system properties like:
+# Hostname, OS, Kernel, Distribution
+# IP addresses, Network Interfaces
+# CPU, Memory, Disk, Mounts
+# Users, Environment variables
+# Python version, Ansible facts
+
+#        When it Runs:
+# By default, facts are gathered automatically at the start of each play (unless gather_facts: no is set).
+# You can run it manually with the setup module.
+# Why Useful:
+# Dynamic decision-making in playbooks.
+# Conditional tasks (e.g., different package managers for Ubuntu vs CentOS).
+
+# Collecting inventory info.
+
+#      🔹 Example Playbooks
+# 1. Gather and Print All Facts
+- name: Gather and show all facts
+  hosts: all
+  tasks:
+    - name: Run setup
+      ansible.builtin.setup:
+
+    - name: Show all facts
+      ansible.builtin.debug:
+        var: ansible_facts
+
+
+#  👉 This will dump all facts (~hundreds of key-values).
+
+# 2. Gather Specific Facts (Filtering)
+- name: Gather only network facts
+  hosts: all
+  tasks:
+    - name: Run setup with filter
+      ansible.builtin.setup:
+        filter: ansible_default_ipv4
+
+    - name: Show default IP
+      ansible.builtin.debug:
+        msg: "Default IP is {{ ansible_facts['ansible_default_ipv4']['address'] }}"
+
+
+# 👉 Example output:
+
+# Default IP is 192.168.122.10
+
+# 3. Conditional Task Based on Facts
+- name: Install package depending on OS family
+  hosts: all
+  tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Install Apache on RedHat
+      yum:
+        name: httpd
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Install Apache on Debian
+      apt:
+        name: apache2
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+
+# 👉 Here Ansible decides automatically which package to install.
+
+# 4. Save Facts for Later Use
+- name: Save host facts into a file
+  hosts: all
+  tasks:
+    - name: Gather all facts
+      ansible.builtin.setup:
+
+    - name: Write facts to local JSON file
+      delegate_to: localhost
+      copy:
+        content: "{{ ansible_facts | to_nice_json }}"
+        dest: "./facts/{{ inventory_hostname }}.json"
+
+
+# 👉 You’ll get structured JSON files with system info for every host.
