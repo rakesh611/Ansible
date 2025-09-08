@@ -1,0 +1,86 @@
+#       🔹 What is the service module?
+# The service module is used to manage services on remote hosts.
+# You can start, stop, restart, enable, disable, or reload a service.
+# Works with SysVinit, Upstart, and systemd services.
+# Facts about the service can also be gathered (use service_facts for detailed info).
+# 🔹 Common Options
+
+| Option          | Description                                   |
+| --------------- | --------------------------------------------- |
+| `name`          | Name of the service to manage                 |
+| `state`         | `started`, `stopped`, `restarted`, `reloaded` |
+| `enabled`       | `yes`/`no` → ensures service starts on boot   |
+| `masked`        | `yes`/`no` → mask/unmask systemd service      |
+| `daemon_reload` | `yes` → reload systemd manager configuration  |
+
+# 🔹 Example 1 – Start a Service
+- name: Start nginx service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure nginx is running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+
+# 🔹 Example 2 – Stop & Disable a Service
+- name: Stop and disable apache
+  hosts: all
+  become: yes
+  tasks:
+    - name: Stop apache2
+      ansible.builtin.service:
+        name: apache2
+        state: stopped
+        enabled: no
+
+# 🔹 Example 3 – Restart a Service
+- name: Restart docker service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Restart docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+# 🔹 Example 4 – Start Service Only If Not Running
+- name: Conditionally start a service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Start sshd if not running
+      ansible.builtin.service:
+        name: sshd
+        state: started
+      when: ansible_facts.services['sshd.service'].state != 'running'
+
+
+# ✅ Here we used service_facts to check the state before acting.
+
+# 🔹 Example 5 – Combined With set_fact for Reporting
+- name: Manage and track service
+  hosts: all
+  become: yes
+  tasks:
+    - name: Start nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+      register: nginx_result
+
+    - name: Save status to fact
+      ansible.builtin.set_fact:
+        nginx_status: "{{ 'started' if nginx_result.changed else 'already running' }}"
+
+    - name: Show nginx status
+      debug:
+        msg: "Nginx service is {{ nginx_status }}"
+
+
+# ✅ This allows reporting or passing info to later tasks or dashboards.
+
+# 🔹 Key Notes
+# Use service for basic service management.
+# For detailed info about multiple services, combine with service_facts.
+# Works on any Linux OS (and some modules support Windows services via win_service).
