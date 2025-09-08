@@ -1,0 +1,33 @@
+---
+- name: Run maintenance scripts on remote hosts
+  hosts: all
+  become: yes
+
+  vars:
+    scripts:
+      - /home/ansible/cleanup_logs.sh
+      - /home/ansible/check_disk.sh
+      - /home/ansible/update_packages.sh
+
+  tasks:
+    - name: Initialize script results
+      ansible.builtin.set_fact:
+        script_results: {}
+
+    - name: Execute scripts on remote host
+      ansible.builtin.script: "{{ item }}"
+      register: script_output
+      ignore_errors: yes
+      loop: "{{ scripts }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: Save each script output in fact
+      ansible.builtin.set_fact:
+        script_results: "{{ script_results | combine({ item.item | basename: { 'stdout': item.stdout, 'stderr': item.stderr, 'rc': item.rc } }) }}"
+      loop: "{{ script_output.results }}"
+
+    - name: Display script results for this host
+      debug:
+        var: script_results
+
