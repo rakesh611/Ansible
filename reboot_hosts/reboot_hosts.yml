@@ -1,0 +1,36 @@
+---
+- name: Reboot multiple hosts with reporting
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Reboot the host
+      ansible.builtin.reboot:
+        msg: "Ansible initiated reboot for maintenance"
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+        reboot_timeout: 600
+      register: reboot_result
+      ignore_errors: yes
+
+    - name: Record reboot status
+      ansible.builtin.set_fact:
+        reboot_report: "{{ reboot_report | default({}) | combine({ inventory_hostname: (reboot_result.failed | ternary('Failed','Success')) }) }}"
+
+    - name: Wait for connection after reboot
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 600
+      register: wait_result
+      ignore_errors: yes
+
+    - name: Update reboot report based on connection
+      ansible.builtin.set_fact:
+        reboot_report: "{{ reboot_report | combine({ inventory_hostname: (wait_result.failed | ternary('Failed','Success')) }) }}"
+
+  # Run this at the end to display the report
+  post_tasks:
+    - name: Show reboot report for all hosts
+      ansible.builtin.debug:
+        var: reboot_report
+
