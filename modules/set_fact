@@ -1,0 +1,81 @@
+#     🔹 What is set_fact?
+# The set_fact module is used to define variables dynamically during playbook execution.
+# Unlike normal variables (defined in vars: or inventory), facts set with set_fact are host-specific and last until the end of the play.
+# These facts can also be used in later tasks just like any other variable.
+# 🔹 Common Use Cases
+# Store dynamic values (e.g., based on conditions).
+# Use registered variables to compute new facts.
+# Control flow (e.g., when: conditions).
+# Reuse computed results across tasks.
+
+# 🔹 Example 1 – Simple Variable
+- name: Example of set_fact
+  hosts: all
+  tasks:
+    - name: Set a custom fact
+      ansible.builtin.set_fact:
+        my_message: "Hello from {{ inventory_hostname }}"
+
+    - name: Display the fact
+      debug:
+        msg: "{{ my_message }}"
+
+
+# ✅ Output will be different for each host.
+
+# 🔹 Example 2 – Using Conditions
+- name: Example with conditions
+  hosts: all
+  tasks:
+    - name: Set OS-specific fact
+      ansible.builtin.set_fact:
+        package_manager: "{{ 'apt' if ansible_facts['os_family'] == 'Debian' else 'yum' }}"
+
+    - name: Show which package manager will be used
+      debug:
+        msg: "This host uses {{ package_manager }}"
+
+
+# ✅ Dynamically selects apt or yum based on OS.
+
+# 🔹 Example 3 – Combine with Registered Variables
+- name: Example with registered var
+  hosts: all
+  tasks:
+    - name: Check uptime
+      command: uptime -p
+      register: uptime_result
+
+    - name: Save uptime as a fact
+      ansible.builtin.set_fact:
+        server_uptime: "{{ uptime_result.stdout }}"
+
+    - name: Print the saved fact
+      debug:
+        msg: "Host {{ inventory_hostname }} uptime: {{ server_uptime }}"
+
+
+# ✅ Stores command output into a fact for later reuse.
+
+# 🔹 Example 4 – Accumulate Values Across Loop
+- name: Accumulate a list with set_fact
+  hosts: all
+  tasks:
+    - name: Initialize empty list
+      ansible.builtin.set_fact:
+        my_list: []
+
+    - name: Add items to list
+      ansible.builtin.set_fact:
+        my_list: "{{ my_list + [ item ] }}"
+      loop:
+        - apple
+        - banana
+        - cherry
+
+    - name: Show final list
+      debug:
+        msg: "My list is: {{ my_list }}"
+
+
+# ✅ Output → ['apple', 'banana', 'cherry']
