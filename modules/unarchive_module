@@ -1,0 +1,101 @@
+#        🔹 unarchive Module – Explanation
+# Purpose: Extracts compressed archive files (.tar, .tar.gz, .tgz, .zip, etc.) on remote machines.
+
+#      Key Features:
+# Can copy the archive from local → remote or use an already existing file on remote.
+# Supports formats: tar, gz, bz2, xz, zip.
+# Can set owner, group, and file permissions.
+# Can extract without copying (copy: no → useful if the archive is already on the remote server).
+
+#          🔹 Key Parameters
+# src: Path to the archive file (local or remote depending on copy).
+# dest: Directory where archive should be unpacked (must exist).
+# copy:
+# yes → Copy file from control node to remote before unpacking.
+# no → Use already existing archive on the remote host.
+# remote_src: Same as copy: no (newer versions prefer remote_src).
+# creates: A file/directory that indicates archive is already unpacked (idempotency).
+# owner, group, mode: Permissions for unpacked files.
+
+           🔹 Example Playbooks
+# 1. Copy and Extract a Local Archive
+---
+- name: Copy and extract app.tar.gz to /opt
+  hosts: all
+  become: yes
+  tasks:
+    - name: Extract tarball
+      ansible.builtin.unarchive:
+        src: /tmp/app.tar.gz
+        dest: /opt/
+        remote_src: no
+
+
+#         👉 Copies app.tar.gz from control node → remote and extracts into /opt/.
+# 2. Extract an Archive Already on Remote
+---
+- name: Extract archive that already exists on remote server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Extract in /usr/local
+      ansible.builtin.unarchive:
+        src: /usr/local/packages/app.zip
+        dest: /usr/local/
+        remote_src: yes
+
+
+#        👉 No copy, directly extracts existing /usr/local/packages/app.zip.
+# 3. Extract and Set Permissions
+---
+- name: Extract with owner and permissions
+  hosts: all
+  become: yes
+  tasks:
+    - name: Extract app with correct ownership
+      ansible.builtin.unarchive:
+        src: /tmp/myapp.tar.gz
+        dest: /opt/myapp/
+        remote_src: yes
+        owner: appuser
+        group: appgroup
+        mode: '0755'
+
+
+#             👉 Ensures extracted files belong to appuser:appgroup.
+# 4. Extract Only If Not Already Done (creates)
+---
+- name: Extract app only once
+  hosts: all
+  become: yes
+  tasks:
+    - name: Extract if marker file does not exist
+      ansible.builtin.unarchive:
+        src: /tmp/myapp.tar.gz
+        dest: /opt/myapp/
+        remote_src: yes
+        creates: /opt/myapp/bin/start.sh
+
+
+#      👉 Extracts only if /opt/myapp/bin/start.sh does not exist → avoids repeated extraction.
+# 5. Real-World Example – Deploying a Web App from GitHub Release
+---
+- name: Deploy web app from GitHub release
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Download latest release
+      ansible.builtin.get_url:
+        url: https://github.com/myorg/myapp/releases/download/v1.0.0/myapp.tar.gz
+        dest: /tmp/myapp.tar.gz
+
+    - name: Extract into /var/www/html
+      ansible.builtin.unarchive:
+        src: /tmp/myapp.tar.gz
+        dest: /var/www/html/
+        remote_src: yes
+        owner: www-data
+        group: www-data
+
+
+# 👉 Downloads and deploys the web app directly into /var/www/html.
