@@ -1,0 +1,75 @@
+# 🔹 What is set_stats?
+# The set_stats module is used to define custom statistics during a playbook run.
+# These stats are displayed at the end of the playbook output (in the "PLAY RECAP" section).
+# Useful for:
+# Tracking how many items were changed.
+# Recording custom metrics (e.g., number of services restarted).
+# Passing summary info across plays.
+#     🔹 Basic Example
+- name: Demo of set_stats
+  hosts: localhost
+  tasks:
+    - name: Do something (simulated task)
+      command: /bin/true
+      register: task_result
+
+    - name: Record a custom stat
+      ansible.builtin.set_stats:
+        data:
+          demo_status: "Task executed successfully"
+
+
+# 👉 At the end of playbook run, you’ll see in the recap:
+# demo_status: Task executed successfully
+# 🔹 Real-World Example – Count Restarted Services
+- name: Restart services and show summary
+  hosts: all
+  become: yes
+  vars:
+    services:
+      - nginx
+      - sshd
+      - docker
+
+  tasks:
+    - name: Restart services
+      service:
+        name: "{{ item }}"
+        state: restarted
+      loop: "{{ services }}"
+      register: restart_result
+      ignore_errors: yes
+
+    - name: Count how many services restarted
+      set_fact:
+        restarted_count: "{{ restart_result.results | selectattr('changed','equalto',true) | list | length }}"
+
+    - name: Save summary as custom stat
+      ansible.builtin.set_stats:
+        data:
+          restarted_services: "{{ restarted_count }}"
+          host_ip: "{{ ansible_facts['ansible_default_ipv4']['address'] }}"
+
+
+# 👉 PLAY RECAP at the end will include:
+
+restarted_services: 2
+host_ip: 192.168.122.45
+
+# 🔹 Passing Stats Between Plays
+
+# If you have multiple plays in the same playbook, set_stats values can be reused:
+
+- name: First play - calculate something
+  hosts: all
+  tasks:
+    - name: Save calculation
+      ansible.builtin.set_stats:
+        data:
+          calc_value: 42
+
+- name: Second play - use the saved stat
+  hosts: all
+  tasks:
+    - debug:
+        msg: "The calculated value is {{ calc_value }}"
