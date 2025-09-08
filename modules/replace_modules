@@ -1,0 +1,84 @@
+#     🔹 What is the replace module?
+# The replace module allows you to search and replace text in files using regular expressions.
+# Useful for config file updates where you need to change a string dynamically.
+# Unlike lineinfile, it can replace all occurrences of a pattern in a file.
+# Supports back-references with regular expressions.
+
+🔹 Common Options
+| Option             | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| `path`             | Path to the file to modify                                   |
+| `regexp`           | Regular expression to match lines/text to replace            |
+| `replace`          | Replacement string (can include back-references `\1`, `\2`)  |
+| `backup`           | `yes`/`no` → create a backup of the file before editing      |
+| `after` / `before` | Optionally limit replacement to lines after/before a pattern |
+| `validate`         | Command to validate file after editing (optional)            |
+
+
+# 🔹 Example 1 – Simple Replace
+- name: Replace a string in a file
+  hosts: all
+  become: yes
+  tasks:
+    - name: Replace 'foo' with 'bar' in /tmp/sample.txt
+      ansible.builtin.replace:
+        path: /tmp/sample.txt
+        regexp: 'foo'
+        replace: 'bar'
+
+
+✅ Replaces all occurrences of foo with bar in the file.
+
+# 🔹 Example 2 – Replace with Back-Reference
+
+File /tmp/sample.conf:
+
+server_name oldserver.example.com;
+
+
+Playbook:
+
+- name: Update server name using back-reference
+  hosts: all
+  tasks:
+    - name: Replace old server domain with new domain
+      ansible.builtin.replace:
+        path: /tmp/sample.conf
+        regexp: '(server_name )oldserver.example.com;'
+        replace: '\1newserver.example.com;'
+
+
+✅ \1 keeps the server_name part intact and only replaces the domain.
+
+# 🔹 Example 3 – Replace Only First Match After Pattern
+- name: Replace only lines after a specific pattern
+  hosts: all
+  tasks:
+    - name: Replace setting after marker
+      ansible.builtin.replace:
+        path: /etc/app/config.ini
+        regexp: 'timeout = \d+'
+        replace: 'timeout = 120'
+        after: '# Performance settings'
+
+
+✅ Only changes the first match after the comment # Performance settings.
+
+# 🔹 Example 4 – Backup File Before Replace
+- name: Replace with backup
+  hosts: all
+  tasks:
+    - name: Replace db_host in config
+      ansible.builtin.replace:
+        path: /etc/myapp/config.ini
+        regexp: 'db_host = .+'
+        replace: 'db_host = db.example.com'
+        backup: yes
+
+
+✅ Keeps a backup of the file (e.g., /etc/myapp/config.ini.20250908-1010) in case something goes wrong.
+
+# 🔹 Real-World Use Case
+Config management → Change IPs, hostnames, or ports in config files.
+CI/CD pipelines → Dynamically update environment variables or secrets.
+System tuning → Modify sysctl.conf or limits.conf parameters.
