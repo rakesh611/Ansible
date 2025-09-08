@@ -1,0 +1,35 @@
+---
+- name: Discover and add hosts dynamically
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Add a new host to group 'dynamic_group' with custom variable
+      ansible.builtin.add_host:
+        name: "192.168.50.15"
+        groups: dynamic_group
+        my_custom_var: "example_value"
+
+    - name: Add multiple hosts to multiple groups
+      ansible.builtin.add_host:
+        name: "{{ item.ip }}"
+        groups:
+          - webservers
+          - monitored
+        ansible_ssh_port: "{{ item.port }}"
+      loop:
+        - { ip: "10.10.10.10", port: 2222 }
+        - { ip: "10.10.10.11", port: 2200 }
+
+- name: Run tasks on dynamically added hosts
+  hosts: dynamic_group:webservers
+  gather_facts: yes
+
+  tasks:
+    - name: Show the host name and custom variable
+      ansible.builtin.debug:
+        msg: "Host {{ inventory_hostname }} has custom var: {{ hostvars[inventory_hostname].my_custom_var | default('not defined') }}"
+
+    - name: Run a simple command on new hosts
+      ansible.builtin.command:
+        cmd: hostname
+
