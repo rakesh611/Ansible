@@ -1,0 +1,74 @@
+#      🔹 What is the rpm_key module?
+# The rpm_key module is used to add or remove GPG keys in the RPM database on Red Hat-based systems (RHEL, CentOS, Fedora).
+# Useful when you need to trust a repository before installing packages.
+# Can import a key from a file or URL or remove an existing key.
+
+🔹 Common Options
+| Option           | Description                                                   |
+| ---------------- | ------------------------------------------------------------- |
+| `state`          | `present` (add key) or `absent` (remove key)                  |
+| `key`            | Path to the GPG key file or URL                               |
+| `validate_certs` | `yes`/`no` (validate SSL when downloading key from HTTPS URL) |
+
+# 🔹 Example 1 – Add a GPG Key from File
+# Assume you have a local key file: /home/ansible/RPM-GPG-KEY-CentOS-7
+
+- name: Add GPG key to RPM database
+  hosts: all
+  become: yes
+  tasks:
+    - name: Import local GPG key
+      ansible.builtin.rpm_key:
+        state: present
+        key: /home/ansible/RPM-GPG-KEY-CentOS-7
+
+
+✅ Adds the key so that packages signed by it can be installed.
+
+# 🔹 Example 2 – Add a GPG Key from URL
+- name: Add GPG key from URL
+  hosts: all
+  become: yes
+  tasks:
+    - name: Import remote GPG key
+      ansible.builtin.rpm_key:
+        state: present
+        key: https://www.example.com/RPM-GPG-KEY
+        validate_certs: yes
+
+
+✅ Downloads and imports the key from a remote location.
+
+# 🔹 Example 3 – Remove a GPG Key
+- name: Remove a GPG key
+  hosts: all
+  become: yes
+  tasks:
+    - name: Remove a key by file
+      ansible.builtin.rpm_key:
+        state: absent
+        key: /home/ansible/RPM-GPG-KEY-CentOS-7
+
+
+✅ Removes the key from the RPM database.
+
+#         🔹 Real-World Use Case
+# Before adding a new YUM repository, import its GPG key:
+# Ensures all packages are trusted and verified.
+# Combine with yum_repository module:
+
+- name: Add repo GPG key
+  rpm_key:
+    state: present
+    key: /home/ansible/myrepo/RPM-GPG-KEY-myrepo
+
+- name: Add repo
+  yum_repository:
+    name: myrepo
+    description: My Custom Repo
+    baseurl: http://myrepo.example.com/centos/7/os/x86_64/
+    gpgcheck: yes
+    gpgkey: /home/ansible/myrepo/RPM-GPG-KEY-myrepo
+
+
+✅ Guarantees secure and trusted package installation.
