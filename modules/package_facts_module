@@ -1,0 +1,97 @@
+🔹 What is the package_facts module?
+
+The package_facts module gathers a list of installed packages on the target system.
+
+It saves the result into the special variable ansible_facts.packages.
+
+Works across different package managers (apt, yum, dnf, etc.).
+
+Useful for:
+✅ Checking if a package is installed.
+✅ Auditing package versions.
+✅ Conditional tasks based on installed software.
+
+🔹 Syntax
+- name: Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+
+manager: auto → Automatically detects package manager (apt, yum, dnf).
+
+🔹 Example 1 – Gather Package Facts
+- name: Collect installed packages
+  hosts: all
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Show installed packages
+      ansible.builtin.debug:
+        var: ansible_facts.packages
+
+
+✅ This will output a dictionary of all installed packages with version(s).
+
+🔹 Example 2 – Check if a Package is Installed
+- name: Check if httpd is installed
+  hosts: all
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Fail if httpd is not installed
+      ansible.builtin.fail:
+        msg: "httpd is not installed!"
+      when: "'httpd' not in ansible_facts.packages"
+
+
+✅ Playbook fails if httpd is missing.
+
+🔹 Example 3 – Get Version of a Package
+- name: Show version of nginx if installed
+  hosts: all
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Print nginx version
+      ansible.builtin.debug:
+        msg: "Nginx version: {{ ansible_facts.packages['nginx'][0].version }}"
+      when: "'nginx' in ansible_facts.packages"
+
+
+✅ Displays nginx version if installed.
+
+🔹 Example 4 – Conditional Installation
+- name: Install tree if not already installed
+  hosts: all
+  become: yes
+  tasks:
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Install tree package
+      ansible.builtin.package:
+        name: tree
+        state: present
+      when: "'tree' not in ansible_facts.packages"
+
+
+✅ Installs tree only if it’s missing.
+
+🔹 Real-World Use Cases
+
+Compliance auditing – ensure required packages are installed.
+
+Version checks – confirm a specific package version before upgrades.
+
+Reporting – gather and store installed package lists.
+
+Conditional deployments – install or skip tasks depending on existing packages.
+
+👉 Pro Tip: For system-wide facts like OS, CPU, and memory, use the setup module. For installed packages, use package_facts.
