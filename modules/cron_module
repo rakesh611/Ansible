@@ -1,0 +1,99 @@
+🔹 What is cron Module?
+
+The cron module manages cron jobs for users.
+
+It can create, update, or remove scheduled tasks in crontab or /etc/cron.d.
+
+Useful for automating recurring tasks (backups, updates, scripts, etc.).
+
+🔹 Common Parameters
+
+name: → A unique identifier (required to manage the cron job).
+
+minute, hour, day, month, weekday: → Time scheduling.
+
+job: → The command to execute.
+
+user: → Which user’s crontab to modify.
+
+state: → present (default) or absent.
+
+cron_file: → Use a specific file inside /etc/cron.d.
+
+🔹 Playbook Examples
+1. Create a Daily Cron Job
+---
+- name: Add a cron job for root
+  hosts: all
+  tasks:
+    - name: Schedule log cleanup at midnight
+      ansible.builtin.cron:
+        name: "Log cleanup job"
+        minute: "0"
+        hour: "0"
+        job: "rm -rf /tmp/*.log"
+        user: root
+
+
+✅ This creates a cron job that deletes /tmp/*.log every midnight.
+
+2. Remove a Cron Job
+---
+- name: Remove a cron job
+  hosts: all
+  tasks:
+    - name: Delete log cleanup cron job
+      ansible.builtin.cron:
+        name: "Log cleanup job"
+        state: absent
+        user: root
+
+3. Cron Job with Custom File in /etc/cron.d
+---
+- name: Add system-wide cron job
+  hosts: all
+  tasks:
+    - name: Run script every 5 minutes
+      ansible.builtin.cron:
+        name: "Run monitoring script"
+        minute: "*/5"
+        job: "/usr/local/bin/monitor.sh"
+        cron_file: "monitoring"
+        user: root
+
+
+👉 This creates /etc/cron.d/monitoring with the cron entry.
+
+4. Disable (Comment Out) a Cron Job
+---
+- name: Disable a cron job without removing
+  hosts: all
+  tasks:
+    - name: Disable cleanup job
+      ansible.builtin.cron:
+        name: "Log cleanup job"
+        job: "rm -rf /tmp/*.log"
+        state: present
+        disabled: yes
+
+5. Environment Variables in Crontab
+---
+- name: Add environment variable to cron
+  hosts: all
+  tasks:
+    - name: Set PATH in cron for user
+      ansible.builtin.cron:
+        name: "PATH setup"
+        env: yes
+        job: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        user: root
+
+🔹 When to Use
+
+✅ Automating periodic maintenance.
+
+✅ Running scripts on schedule.
+
+✅ System-wide jobs via /etc/cron.d.
+
+✅ Managing environment variables in crontab.

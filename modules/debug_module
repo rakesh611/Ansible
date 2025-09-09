@@ -1,0 +1,90 @@
+🔹 What is debug Module?
+
+The debug module is one of the most used Ansible modules.
+
+It helps to print variables, messages, or results during playbook execution.
+
+Mainly used for troubleshooting, validation, and visibility of Ansible runs.
+
+🔹 Common Parameters
+
+msg: → Print a custom message.
+
+var: → Print the value of a variable or fact.
+
+verbosity: → Show only if -v, -vv, or -vvv is used.
+
+🔹 Playbook Examples
+1. Print a Custom Message
+---
+- name: Debug example - message
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Print hello world
+      ansible.builtin.debug:
+        msg: "Hello from Ansible!"
+
+
+✅ Output will show "Hello from Ansible!".
+
+2. Print a Variable
+---
+- name: Debug example - variable
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Show the hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+
+✅ Prints the hostname fact of the target system.
+
+3. Print Multiple Variables
+---
+- name: Debug multiple variables
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Show OS and Kernel
+      ansible.builtin.debug:
+        msg: "OS = {{ ansible_distribution }} {{ ansible_distribution_version }}, Kernel = {{ ansible_kernel }}"
+
+4. Debug with Conditional
+---
+- name: Conditional debug
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Print if OS is Ubuntu
+      ansible.builtin.debug:
+        msg: "This is an Ubuntu server"
+      when: ansible_distribution == "Ubuntu"
+
+5. Debug with Verbosity
+---
+- name: Debug verbosity example
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Show message only with -vv
+      ansible.builtin.debug:
+        msg: "Extra debug info"
+        verbosity: 2
+
+
+✅ Run with:
+
+ansible-playbook debug_example.yml -vv
+
+
+Only then the message will appear.
+
+🔹 When to Use
+
+✅ To troubleshoot playbooks.
+
+✅ To check variables and facts at runtime.
+
+✅ To conditionally print information.

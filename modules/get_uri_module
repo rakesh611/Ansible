@@ -1,0 +1,99 @@
+🔹 What is get_url?
+
+The get_url module is used to download files from the internet (HTTP, HTTPS, or FTP) onto target nodes.
+
+It’s like running wget or curl, but in an idempotent Ansible way.
+
+Supports checksum verification, proxy settings, and file permissions.
+
+🔹 Common Parameters
+
+url: → The source URL to download from.
+
+dest: → Destination path on the remote node.
+
+mode: → File permissions (e.g., "0644").
+
+owner: / group: → Set file ownership.
+
+checksum: → Verify file integrity (MD5, SHA256, etc.).
+
+force: → Force download even if file exists.
+
+timeout: → Timeout for connection (in seconds).
+
+validate_certs: → Whether to validate SSL certificates.
+
+🔹 Playbook Examples
+1. Download a File from URL
+---
+- name: Download a file using get_url
+  hosts: all
+  tasks:
+    - name: Download sample tarball
+      ansible.builtin.get_url:
+        url: https://example.com/files/app.tar.gz
+        dest: /tmp/app.tar.gz
+        mode: '0644'
+
+2. Download with Checksum Verification
+---
+- name: Download file with checksum
+  hosts: all
+  tasks:
+    - name: Get nginx tarball with checksum
+      ansible.builtin.get_url:
+        url: http://nginx.org/download/nginx-1.24.0.tar.gz
+        dest: /usr/local/src/nginx-1.24.0.tar.gz
+        checksum: sha256:5e4a9e6ffb1234567890abcdef1234567890abcdef1234567890abcdef123456
+
+
+👉 Ensures the file is valid. If checksum mismatches, the task fails.
+
+3. Overwrite Existing File (Force)
+---
+- name: Force download file
+  hosts: all
+  tasks:
+    - name: Re-download config file always
+      ansible.builtin.get_url:
+        url: https://example.com/config/latest.conf
+        dest: /etc/myapp/config.conf
+        force: yes
+
+4. Download with Custom Ownership and Permissions
+---
+- name: Download with owner and permissions
+  hosts: all
+  tasks:
+    - name: Get script file
+      ansible.builtin.get_url:
+        url: https://example.com/scripts/backup.sh
+        dest: /usr/local/bin/backup.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+
+👉 Makes it executable immediately.
+
+5. Download Ignoring SSL Certificate Errors
+---
+- name: Download ignoring SSL
+  hosts: all
+  tasks:
+    - name: Get file without SSL check
+      ansible.builtin.get_url:
+        url: https://self-signed.local/file.txt
+        dest: /tmp/file.txt
+        validate_certs: no
+
+🔹 When to Use
+
+✅ Fetch software packages or source tarballs.
+
+✅ Download configuration files or scripts from a central server.
+
+✅ Retrieve backups or data files over HTTP/FTP.
+
+✅ Automate initial setup with remote artifacts.

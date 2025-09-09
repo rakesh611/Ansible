@@ -1,0 +1,123 @@
+🔹 What is find Module?
+
+The find module searches for files and directories on remote hosts.
+
+It returns a list of matched items as facts.
+
+Very useful for cleanup tasks, audits, and batch operations.
+
+It works similar to the Linux find command but in an idempotent and structured way.
+
+🔹 Common Parameters
+
+paths: → Directory (or list) to search in.
+
+patterns: → Filename patterns (e.g., "*.log", "*.conf").
+
+recurse: → Search recursively (yes / no).
+
+file_type: → file, directory, link, or any.
+
+age: → Files older than (10m, 2h, 1d).
+
+size: → Files matching size (+10M, -1k).
+
+excludes: → Exclude specific files or directories.
+
+hidden: → Whether to include hidden files.
+
+🔹 Playbook Examples
+1. Find All .log Files in /var/log
+---
+- name: Find log files
+  hosts: all
+  tasks:
+    - name: Search for .log files
+      ansible.builtin.find:
+        paths: /var/log
+        patterns: "*.log"
+      register: log_files
+
+    - name: Show found log files
+      ansible.builtin.debug:
+        var: log_files.files
+
+
+👉 This will list all .log files in /var/log.
+
+2. Find Old Files (Older Than 7 Days)
+---
+- name: Find old temp files
+  hosts: all
+  tasks:
+    - name: Search for files older than 7 days
+      ansible.builtin.find:
+        paths: /tmp
+        age: 7d
+        file_type: file
+      register: old_files
+
+    - name: Show old files
+      ansible.builtin.debug:
+        var: old_files.files
+
+3. Delete Files After Finding Them
+---
+- name: Find and delete old logs
+  hosts: all
+  tasks:
+    - name: Search for logs older than 30 days
+      ansible.builtin.find:
+        paths: /var/log
+        patterns: "*.log"
+        age: 30d
+      register: old_logs
+
+    - name: Remove old log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"
+
+
+👉 This finds log files older than 30 days and deletes them.
+
+4. Find Large Files (>100 MB)
+---
+- name: Find large files
+  hosts: all
+  tasks:
+    - name: Search for files larger than 100MB
+      ansible.builtin.find:
+        paths: /home
+        size: +100M
+      register: large_files
+
+    - name: Show large files
+      ansible.builtin.debug:
+        var: large_files.files
+
+5. Find Hidden Files in a Directory
+---
+- name: Find hidden files
+  hosts: all
+  tasks:
+    - name: Search for hidden files in /etc
+      ansible.builtin.find:
+        paths: /etc
+        hidden: yes
+      register: hidden_files
+
+    - name: Show hidden files
+      ansible.builtin.debug:
+        var: hidden_files.files
+
+🔹 When to Use
+
+✅ To audit or clean old log/temp files.
+
+✅ To locate large files consuming space.
+
+✅ To check for hidden or unauthorized files.
+
+✅ To prepare for archiving or migration.

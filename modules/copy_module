@@ -1,0 +1,117 @@
+🔹 What is copy Module?
+
+The copy module is used to copy files from the Ansible control node to target hosts.
+
+It can also create new files with given content, set permissions, ownership, and SELinux contexts.
+
+It is idempotent → if the file already exists with the same content, it won’t change.
+
+🔹 Common Parameters
+
+src: → Source file path on control node.
+
+dest: → Destination path on remote host.
+
+content: → Instead of src, provide inline file content.
+
+owner: → File owner.
+
+group: → File group.
+
+mode: → File permissions (e.g., "0644").
+
+backup: → If set to yes, keeps a backup before overwriting.
+
+force: → Overwrite even if the file already exists.
+
+🔹 Playbook Examples
+1. Copy a File to Remote Host
+---
+- name: Copy file example
+  hosts: all
+  tasks:
+    - name: Copy configuration file
+      ansible.builtin.copy:
+        src: files/myconfig.conf
+        dest: /etc/myconfig.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+
+👉 Copies files/myconfig.conf (from playbook directory) to /etc/myconfig.conf on all hosts.
+
+2. Create a File with Content
+---
+- name: Create file with given content
+  hosts: all
+  tasks:
+    - name: Add a welcome message
+      ansible.builtin.copy:
+        dest: /etc/motd
+        content: |
+          Welcome to {{ ansible_hostname }}
+          Managed by Ansible 🚀
+        owner: root
+        group: root
+        mode: '0644'
+
+
+👉 This will create /etc/motd with the provided text.
+
+3. Copy a File and Keep Backup of Old File
+---
+- name: Copy file with backup
+  hosts: all
+  tasks:
+    - name: Copy and backup old file
+      ansible.builtin.copy:
+        src: files/httpd.conf
+        dest: /etc/httpd/conf/httpd.conf
+        backup: yes
+        owner: root
+        group: root
+        mode: '0644'
+
+
+👉 If the file changes, Ansible will store a backup with a timestamp.
+
+4. Copy File Only If It Doesn’t Exist
+---
+- name: Copy file only if not present
+  hosts: all
+  tasks:
+    - name: Copy license file
+      ansible.builtin.copy:
+        src: files/license.txt
+        dest: /opt/license.txt
+        force: no
+
+
+👉 Ensures the file is copied only if it does not exist.
+
+5. Copy File with Different Permissions
+---
+- name: Copy script with execute permission
+  hosts: all
+  tasks:
+    - name: Deploy script
+      ansible.builtin.copy:
+        src: scripts/cleanup.sh
+        dest: /usr/local/bin/cleanup.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+
+👉 Makes the script executable after copying.
+
+🔹 When to Use
+
+✅ Deploy configuration files.
+
+✅ Distribute scripts across servers.
+
+✅ Push license or motd files.
+
+✅ Create text files with dynamic content.
