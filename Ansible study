@@ -1,0 +1,2788 @@
+✅ What is Ansible?
+Ansible is an open-source IT automation and configuration management tool. It is primarily used to:
+Automate software provisioning, configuration management, and application deployment.
+Manage infrastructure as code (IaC).
+Orchestrate complex workflows across multiple servers.
+Ansible uses YAML syntax for its playbooks, which makes it easy to understand and use.
+
+✅ Agentless Architecture in Ansible
+One of Ansible’s standout features is that it is agentless.
+🔸 What does Agentless mean?
+No software or agent is required on the target nodes.
+Ansible connects to managed hosts using standard protocols like SSH (Linux/Unix) or WinRM (Windows).
+No background daemons or persistent agents run on the client systems.
+
+✅ Benefits of Agentless:
+| Feature                 | Benefit                                         |
+| ----------------------- | ----------------------------------------------- |
+| 🔒 Secure               | No agents = reduced attack surface              |
+| ⚙️ Simple               | No need to install and manage software on nodes |
+| 🔁 Low Overhead         | Uses existing protocols (like SSH)              |
+| 🧼 Cleaner Environments | No leftover processes or resources              |
+
+✅ Push-Based Automation in Ansible
+Ansible is push-based, which means the control node pushes configuration and commands to the managed nodes.
+🔸 How Push-Based Works:
+You run an Ansible playbook or ad-hoc command from the Ansible control node.
+Ansible connects (via SSH/WinRM) to the target machines.
+It executes tasks immediately on the targets.
+The results are returned back to the control node in real-time.
+
+✅ Push vs Pull Model:
+| Model    | Description                                          | Example Tool |
+| -------- | ---------------------------------------------------- | ------------ |
+| **Push** | Control server pushes tasks to clients               | **Ansible**  |
+| **Pull** | Clients pull configs from central server on schedule | Puppet, Chef |
+
+✅ Installing Ansible on the Control Node
+🔹 Supported Control Node OS:
+Most commonly on Linux (e.g., RHEL, CentOS, Ubuntu)
+
+🔹 Install Ansible on RHEL/CentOS 8/9:
+# 1. Enable EPEL repository (if not already enabled)
+sudo dnf install epel-release -y
+
+# 2. Install Ansible
+sudo dnf install ansible -y
+
+# 3. Check the installation
+ansible --version
+🔹 Install Ansible on Ubuntu/Debian:
+# 1. Update packages
+sudo apt update
+
+# 2. Install Ansible
+sudo apt install ansible -y
+
+# 3. Check the version
+ansible --version
+✅ Inventory File in Ansible
+Ansible uses an inventory file to define the hosts (target machines) it manages.
+
+📂 Default location:
+/etc/ansible/hosts
+📄 This file lists IP addresses, hostnames, and groups of hosts.
+🔹 Sample Inventory File Structure (/etc/ansible/hosts):
+# Single host entry
+192.168.1.10
+
+# Host with alias
+web1 ansible_host=192.168.1.11
+
+# Group of servers
+[webservers]
+web1
+192.168.1.12
+
+[dbservers]
+db1 ansible_host=192.168.1.20 ansible_user=root ansible_port=2222
+
+# Nested groups
+[production:children]
+webservers
+dbservers
+🔹 Inventory File Explanation:
+| Entry                            | Meaning                          |
+| -------------------------------- | -------------------------------- |
+| `192.168.1.10`                   | A single host identified by IP   |
+| `web1 ansible_host=192.168.1.11` | Alias `web1` maps to IP          |
+| `[webservers]`                   | Group name for multiple hosts    |
+| `ansible_user=`                  | SSH user for the host            |
+| `ansible_port=`                  | Non-default SSH port             |
+| `[group1:children]`              | Parent group combining subgroups |
+🔹 Test Inventory Connection:
+ansible all -m ping
+# OR test a specific group
+ansible webservers -m ping
+This will ping all hosts via SSH and show whether they’re reachable by Ansible.
+
+✅ What Are Ad-Hoc Commands in Ansible?
+Ad-hoc commands are one-time commands used to quickly perform a task without writing a playbook.
+They are useful for:
+Testing connections
+Rebooting systems
+Installing packages
+Copying files
+Managing services
+Gathering facts
+✅ General Syntax:
+ansible <host-pattern> -m <module> -a "<arguments>"
+✅ Common Ad-Hoc Commands (with examples)
+🔹 1. Ping Hosts (test connection using ping module)
+ansible all -m ping
+🔹 2. Run Shell Commands
+ansible all -m shell -a "uptime"
+or use command (more secure, but limited):
+ansible all -m command -a "df -h"
+🔹 3. Install Packages (e.g., Apache)
+ansible all -m yum -a "name=httpd state=present" --become
+Use --become (or -b) for root privileges.
+🔹 4. Start/Stop/Restart a Service
+ansible all -m service -a "name=httpd state=started" --become
+ansible all -m service -a "name=httpd state=restarted" --become
+ansible all -m service -a "name=httpd state=stopped" --become
+🔹 5. Copy Files to Remote Hosts
+ansible all -m copy -a "src=/home/user/index.html dest=/var/www/html/index.html" --become
+🔹 6. Fetch Files from Remote Hosts
+ansible all -m fetch -a "src=/etc/hosts dest=/tmp/hosts_backup flat=yes"
+🔹 7. Create a User
+ansible all -m user -a "name=testuser state=present" --become
+🔹 8. Gather Facts about Hosts
+ansible all -m setup
+To get specific facts (e.g., IP address only):
+ansible all -m setup -a "filter=ansible_default_ipv4"
+✅ Summary Table:
+| Task            | Module              | Example                                                |
+| --------------- | ------------------- | ------------------------------------------------------ |
+| Test connection | `ping`              | `ansible all -m ping`                                  |
+| Run command     | `shell` / `command` | `ansible all -m shell -a "uptime"`                     |
+| Install package | `yum` / `apt`       | `ansible all -m yum -a "name=httpd"`                   |
+| Manage service  | `service`           | `ansible all -m service -a "name=httpd state=started"` |
+| Copy file       | `copy`              | `ansible all -m copy -a "src=/file dest=/dest"`        |
+| Create user     | `user`              | `ansible all -m user -a "name=user1"`                  |
+| Get facts       | `setup`             | `ansible all -m setup`                                 |
+
+✅ 1. Static vs Dynamic Inventory
+| Feature         | Static Inventory               | Dynamic Inventory                                     |
+| --------------- | ------------------------------ | ----------------------------------------------------- |
+| **Definition**  | Manually defined list of hosts | Generated in real-time from cloud providers or CMDBs  |
+| **Format**      | INI, YAML, JSON                | Python scripts or inventory plugins                   |
+| **Use Case**    | Small or fixed environments    | Cloud-based, auto-scaling, or dynamic infrastructures |
+| **Maintenance** | Manual updates                 | Automatically fetches live inventory                  |
+| **Speed**       | Faster for small setups        | Better for large cloud environments                   |
+
+✅ 2. Static Inventory Formats
+🔹 INI Format (Traditional)
+[web]
+web1 ansible_host=192.168.0.11
+web2 ansible_host=192.168.0.12
+
+[db]
+db1 ansible_host=192.168.0.21 ansible_user=admin
+
+[prod:children]
+web
+db
+🔹 YAML Format (inventory.yml)
+all:
+  children:
+    web:
+      hosts:
+        web1:
+          ansible_host: 192.168.0.11
+        web2:
+          ansible_host: 192.168.0.12
+    db:
+      hosts:
+        db1:
+          ansible_host: 192.168.0.21
+          ansible_user: admin
+Run with:
+ansible-inventory -i inventory.yml --list
+🔹 JSON Format
+{
+  "web": {
+    "hosts": ["web1", "web2"],
+    "vars": { "ansible_user": "ec2-user" }
+  },
+  "db": {
+    "hosts": ["db1"]
+  },
+  "_meta": {
+    "hostvars": {
+      "web1": { "ansible_host": "192.168.0.11" },
+      "web2": { "ansible_host": "192.168.0.12" },
+      "db1":  { "ansible_host": "192.168.0.21" }
+    }
+  }
+}
+Run with:
+ansible-inventory -i inventory.json --list
+
+✅ 3. Dynamic Inventory in Ansible
+🔸 How It Works:
+Uses inventory plugins or scripts to dynamically fetch host lists.
+Automatically pulls data from cloud providers like AWS EC2, GCP, Azure, OpenStack, etc.
+✅ Required:
+Credential setup for cloud
+Ansible inventory plugin or dynamic inventory script
+A config .yml file for the plugin
+✅ 4. Dynamic Inventory Examples by Cloud
+
+🌩️ A. AWS EC2
+📂 Plugin: amazon.aws.aws_ec2
+🔧 Setup:
+Install collection:
+ansible-galaxy collection install amazon.aws
+
+Create file aws_ec2.yml:
+plugin: amazon.aws.aws_ec2
+regions:
+  - ap-south-1
+filters:
+  instance-state-name: running
+keyed_groups:
+  - key: tags.Name
+hostnames:
+  - public-ip-address
+
+Set AWS credentials:
+export AWS_ACCESS_KEY_ID=AKIAXXXXXXX
+export AWS_SECRET_ACCESS_KEY=XXXXXXXXXXXXXXXX
+Run:
+ansible-inventory -i aws_ec2.yml --graph
+
+☁️ B. GCP
+📂 Plugin: google.cloud.gcp_compute
+🔧 Setup:
+Install collection:
+ansible-galaxy collection install google.cloud
+Service Account JSON key required.
+Create gcp_inventory.yml:
+plugin: google.cloud.gcp_compute
+projects:
+  - my-gcp-project
+zones:
+  - asia-south1-a
+auth_kind: serviceaccount
+service_account_file: /path/to/service_account.json
+hostnames:
+  - networkInterfaces[0].accessConfigs[0].natIP
+
+Run:
+ansible-inventory -i gcp_inventory.yml --graph
+
+☁️ C. Azure
+📂 Plugin: azure.azcollection.azure_rm
+🔧 Setup:
+Install collection:
+ansible-galaxy collection install azure.azcollection
+Create azure_rm.yml:
+plugin: azure.azcollection.azure_rm
+include_vm_resource_groups:
+  - myResourceGroup
+auth_source: auto
+keyed_groups:
+  - key: tags.environment
+Set environment variables:
+export AZURE_SUBSCRIPTION_ID=<your-subscription-id>
+export AZURE_CLIENT_ID=<your-client-id>
+export AZURE_SECRET=<your-client-secret>
+export AZURE_TENANT=<your-tenant-id>
+Run:
+ansible-inventory -i azure_rm.yml --graph
+✅ Summary Table
+| Type    | Format               | Tools            | Example File                                       |
+| ------- | -------------------- | ---------------- | -------------------------------------------------- |
+| Static  | INI / YAML / JSON    | Manual           | `/etc/ansible/hosts`, `inventory.yml`              |
+| Dynamic | YAML (plugin config) | Inventory plugin | `aws_ec2.yml`, `gcp_inventory.yml`, `azure_rm.yml` |
+
+✅ 1. Host Groups in Ansible
+🔹 What is a Host Group?
+A host group is a logical collection of hosts grouped together in the Ansible inventory file. You use host groups to organize, target, and apply configuration to multiple systems at once.
+🔹 Example: INI Format
+[webservers]
+web1 ansible_host=192.168.1.10
+web2 ansible_host=192.168.1.11
+
+[dbservers]
+db1 ansible_host=192.168.1.20
+
+[allservers:children]
+webservers
+dbservers
+
+| Group        | Meaning                 |
+| ------------ | ----------------------- |
+| `webservers` | Hosts for web apps      |
+| `dbservers`  | Hosts running databases |
+| `allservers` | A parent group of both  |
+🔹 Example: YAML Format
+all:
+  children:
+    webservers:
+      hosts:
+        web1:
+          ansible_host: 192.168.1.10
+        web2:
+          ansible_host: 192.168.1.11
+    dbservers:
+      hosts:
+        db1:
+          ansible_host: 192.168.1.20
+✅ 2. Host Patterns
+🔹 What is a Host Pattern?
+A host pattern lets you specify which hosts or groups to run your tasks on using keywords, wildcards, and operators.
+🔹 Common Host Pattern Examples
+| Pattern                 | Meaning                                             |
+| ----------------------- | --------------------------------------------------- |
+| `all`                   | Match all hosts                                     |
+| `webservers`            | Match all hosts in the `webservers` group           |
+| `web1`                  | Match a specific host                               |
+| `web*`                  | Wildcard – match all hosts starting with "web"      |
+| `webservers:dbservers`  | Union – match hosts in either group                 |
+| `webservers:&dbservers` | Intersection – hosts in both groups                 |
+| `webservers:!dbservers` | Difference – in `webservers` but not in `dbservers` |
+| `prod:children`         | All child groups of `prod`                          |
+
+🔹 Run Ad-Hoc Commands Using Patterns
+# Ping all webservers
+ansible webservers -m ping
+
+# Ping all except dbservers
+ansible all:!dbservers -m ping
+
+# Ping only common hosts between two groups
+ansible webservers:&production -m ping
+
+✅ What is ansible.cfg?
+ansible.cfg is Ansible’s main configuration file where you define default behaviors, paths, and runtime settings that affect how Ansible operates.
+✅ Locations (Ansible loads in order of priority)
+Ansible looks for the config file in this order:
+Environment variable: ANSIBLE_CONFIG
+Current directory: ./ansible.cfg
+User's home directory: ~/.ansible.cfg
+System-wide: /etc/ansible/ansible.cfg
+🔸 The first file found is the one that gets used.
+✅ Sample ansible.cfg File
+[defaults]
+inventory = ./inventory
+remote_user = ansible
+host_key_checking = False
+retry_files_enabled = False
+timeout = 10
+private_key_file = ~/.ssh/id_rsa
+roles_path = ./roles
+forks = 10
+
+[privilege_escalation]
+become = True
+become_method = sudo
+become_user = root
+
+[ssh_connection]
+pipelining = True
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+✅ Key Sections Explained
+🔹 [defaults]
+Basic global settings for how Ansible behaves.
+| Option                | Description                             |
+| --------------------- | --------------------------------------- |
+| `inventory`           | Path to the inventory file or directory |
+| `remote_user`         | Default SSH user                        |
+| `host_key_checking`   | Disable/enable SSH key checking         |
+| `retry_files_enabled` | Disable `.retry` file creation          |
+| `timeout`             | SSH connection timeout (in seconds)     |
+| `private_key_file`    | Path to SSH key                         |
+| `forks`               | Number of parallel processes            |
+| `roles_path`          | Path to Ansible roles                   |
+
+🔹 [privilege_escalation]
+Controls sudo (or other privilege methods).
+| Option          | Description                          |
+| --------------- | ------------------------------------ |
+| `become`        | Enables privilege escalation         |
+| `become_method` | Method (e.g., `sudo`, `su`, `pbrun`) |
+| `become_user`   | User to switch to (usually root)     |
+
+🔹 [ssh_connection]
+Advanced SSH connection behavior.
+| Option         | Description                                |
+| -------------- | ------------------------------------------ |
+| `pipelining`   | Speed up connections by reducing SSH calls |
+| `ssh_args`     | Additional options to pass to SSH          |
+| `control_path` | Path used for SSH control sockets          |
+| `scp_if_ssh`   | Use SCP instead of SFTP for file transfers |
+
+🔹 [callback_whitelist] (Optional)
+Enable or whitelist callback plugins (e.g., timer, profile_tasks, yaml)
+[defaults]
+callback_whitelist = timer, yaml
+✅ Verify Config in Use
+ansible --version
+This shows which ansible.cfg is being used:
+config file = /home/user/project/ansible.cfg
+✅ Use Case Example (Custom Project)
+📂 Directory:
+myproject/
+├── ansible.cfg
+├── inventory/
+│   └── hosts.ini
+├── playbook.yml
+└── roles/
+ansible.cfg:
+[defaults]
+inventory = ./inventory/hosts.ini
+roles_path = ./roles
+host_key_checking = False
+retry_files_enabled = False
+✅ Summary Table
+| Section                  | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `[defaults]`             | Basic settings like inventory, user, forks, key |
+| `[privilege_escalation]` | Sudo and user switching control                 |
+| `[ssh_connection]`       | Fine-tune SSH behavior                          |
+| `[callback_whitelist]`   | Enable logging or output formatting plugins     |
+
+✅ What is an Ansible Playbook?
+An Ansible Playbook is a YAML file that defines a set of tasks to automate configuration, deployment, or orchestration of systems.
+It is declarative, meaning you describe the desired state, and Ansible ensures it happens.
+✅ Why Use Playbooks?
+Reusable automation scripts
+Define multiple tasks, roles, variables, and handlers
+Idempotent (safe to run multiple times)
+Easy to version control with Git
+✅ Basic Playbook Structure
+---
+- name: Playbook Name
+  hosts: webservers
+  become: true
+  vars:
+    package_name: httpd
+
+  tasks:
+    - name: Install Apache
+      yum:
+        name: "{{ package_name }}"
+        state: present
+
+    - name: Start Apache service
+      service:
+        name: "{{ package_name }}"
+        state: started
+        enabled: true
+✅ Key Components Explained
+| Component | Description                                 |
+| --------- | ------------------------------------------- |
+| `- name:` | A human-readable description of the play    |
+| `hosts:`  | Which group/host to target (from inventory) |
+| `become:` | Escalate privileges (sudo)                  |
+| `vars:`   | Define variables                            |
+| `tasks:`  | A list of steps to execute                  |
+
+🔹 What is a Task?
+A task in Ansible is a single action executed on the target host(s) defined in a playbook. It uses a module to perform the action.
+🔹 Structure of a Task:
+- name: Install NGINX
+  apt:
+    name: nginx
+    state: present
+
+Each task contains:
+name: Description of what the task does.
+A module (e.g., apt, yum, copy, service).
+Arguments/options passed to the module.
+
+🔹 Common Features in Tasks:
+when: Conditional execution
+register: Store output of a module
+with_items / loop: Iteration
+notify: Trigger handlers
+tags: Run specific tasks
+🧰 2. All Major Ansible Modules – Explained by Category
+💡 Modules are the tools that do the actual work in Ansible. Tasks call these modules.
+📁 File & Directory Management Modules
+| Module        | Purpose                         | Example                         |
+| ------------- | ------------------------------- | ------------------------------- |
+| `copy`        | Copy files to remote machines   | Copy config files               |
+| `template`    | Use Jinja2 templates (`.j2`)    | Generate dynamic configs        |
+| `file`        | Set file permissions, ownership | Create/delete files/directories |
+| `stat`        | Check if a file exists          | Conditionals                    |
+| `lineinfile`  | Ensure a line is present/absent | Edit config files               |
+| `blockinfile` | Insert/update text blocks       | Manage config blocks            |
+| `replace`     | Replace string patterns         | Modify values in files          |
+| `fetch`       | Copy files from remote → local  | Download logs                   |
+
+📦 Package Management Modules
+| Module    | OS          | Purpose                   |
+| --------- | ----------- | ------------------------- |
+| `apt`     | Debian      | Install/remove packages   |
+| `yum`     | RHEL/CentOS | Install/remove packages   |
+| `dnf`     | Fedora/8+   | Newer RHEL package mgr    |
+| `package` | All         | Generic package installer |
+- name: Install NGINX
+  apt:
+    name: nginx
+    state: present
+
+🧪 Service Management Modules
+| Module          | Purpose                     |
+| --------------- | --------------------------- |
+| `service`       | Start/stop/restart services |
+| `systemd`       | Manage `systemd` services   |
+| `supervisorctl` | Manage Supervisor           |
+
+👤 User and Group Management Modules
+| Module           | Purpose               |
+| ---------------- | --------------------- |
+| `user`           | Manage users          |
+| `group`          | Manage groups         |
+| `authorized_key` | Add SSH keys to users |
+
+🖥 Command Execution Modules
+| Module    | Purpose                               |           |
+| --------- | ------------------------------------- | --------- |
+| `command` | Run system commands (no shell)        |           |
+| `shell`   | Run shell commands (`<`, \`           | `, `&&\`) |
+| `script`  | Run local script on remote host       |           |
+| `raw`     | Low-level remote command              |           |
+| `expect`  | Interact with scripts requiring input |           |
+✅ Use command for simple commands
+⚠️ Use shell only when shell features are required
+
+📤 Archive and Compression Modules
+| Module      | Purpose                   |
+| ----------- | ------------------------- |
+| `unarchive` | Extract `.tar.gz` files   |
+| `archive`   | Create archive from files |
+
+💡 Networking Modules
+| Module      | Purpose                    |
+| ----------- | -------------------------- |
+| `uri`       | Interact with HTTP APIs    |
+| `get_url`   | Download file from URL     |
+| `firewalld` | Manage firewalld rules     |
+| `iptables`  | Manage iptables rules      |
+| `nmcli`     | Manage network connections |
+
+💻 System and Process Modules
+| Module     | Purpose                       |
+| ---------- | ----------------------------- |
+| `setup`    | Gather system facts           |
+| `cron`     | Manage cron jobs              |
+| `hostname` | Set system hostname           |
+| `mount`    | Mount and unmount filesystems |
+| `sysctl`   | Manage kernel parameters      |
+
+🧠 Fact Gathering / Variables
+| Module         | Purpose                        |
+| -------------- | ------------------------------ |
+| `setup`        | Gathers system facts           |
+| `debug`        | Print messages/variable values |
+| `assert`       | Validate conditions            |
+| `set_fact`     | Define new variables           |
+| `include_vars` | Include var files              |
+
+🔒 Security & Vault
+| Module          | Purpose               |
+| --------------- | --------------------- |
+| `ansible-vault` | Encrypt/decrypt files |
+| `seboolean`     | Set SELinux booleans  |
+| `selinux`       | Configure SELinux     |
+| `ufw`           | Manage UFW firewall   |
+
+☁️ Cloud Modules
+| Platform | Modules                         |
+| -------- | ------------------------------- |
+| AWS      | `ec2`, `s3`, `rds`, `elb`, etc. |
+| Azure    | `azure_rm_*` modules            |
+| GCP      | `gcp_*` modules                 |
+
+🐳 Container Modules
+| Module             | Purpose                  |
+| ------------------ | ------------------------ |
+| `docker_container` | Manage Docker containers |
+| `docker_image`     | Pull/build images        |
+| `podman_*`         | Podman support           |
+
+☸️ Kubernetes Modules
+| Module     | Purpose                   |
+| ---------- | ------------------------- |
+| `k8s`      | Manage Kubernetes objects |
+| `k8s_info` | Get object info           |
+| `helm`     | Install Helm charts       |
+
+🔗 Control Flow & Error Handling
+| Module   | Purpose                        |
+| -------- | ------------------------------ |
+| `block`  | Group tasks                    |
+| `rescue` | Define failure recovery        |
+| `always` | Run tasks even if error occurs |
+| `meta`   | Control playbook execution     |
+
+📌 Example Task Using Multiple Features:
+- name: Install multiple packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nginx
+    - curl
+    - git
+  when: ansible_os_family == "Debian"
+  register: result
+
+✅ What are Handlers in Ansible?
+Handlers are special tasks in Ansible that are only executed when notified by another task.
+They are typically used for:
+Restarting a service
+Reloading configuration
+Clearing cache
+Sending alerts/logs
+⚠️ Handlers run once per play, even if notified by multiple tasks.
+✅ What is a Notification?
+A notification is a trigger that tells Ansible:
+“If this task made a change, run the specified handler.”
+✅ Basic Structure: Tasks with Handlers
+---
+- name: Example of handlers
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Install Apache
+      yum:
+        name: httpd
+        state: present
+      notify: restart apache
+
+    - name: Deploy config file
+      copy:
+        src: files/httpd.conf
+        dest: /etc/httpd/conf/httpd.conf
+      notify: restart apache
+
+  handlers:
+    - name: restart apache
+      service:
+        name: httpd
+        state: restarted
+
+✅ Step-by-Step Breakdown
+| Part         | What it does                                                   |
+| ------------ | -------------------------------------------------------------- |
+| `notify:`    | Tells Ansible to trigger a handler if this task makes a change |
+| `handlers:`  | Declares the actions to be performed when notified             |
+| `name:`      | Name of the handler (must match `notify`)                      |
+| Handler task | Executed **only once**, even if multiple tasks notify it       |
+
+✅ Real Example: Restarting NGINX if Config Changes
+- name: Update nginx config and reload
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Copy nginx config
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify: reload nginx
+
+  handlers:
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded
+📌 If the config file changes, nginx will be reloaded. If the file is identical, the handler won’t run.
+✅ Multiple Handlers
+  tasks:
+    - name: Update app code
+      git:
+        repo: https://github.com/example/app.git
+        dest: /var/www/html/
+      notify:
+        - restart apache
+        - clear cache
+
+  handlers:
+    - name: restart apache
+      service:
+        name: httpd
+        state: restarted
+
+    - name: clear cache
+      command: rm -rf /var/cache/app
+✅ Handler Execution Timing
+Handlers run at the end of the playbook (by default).
+They can be forced earlier using the meta module:
+- meta: flush_handlers
+✅ Summary
+| Feature                | Description                                                     |
+| ---------------------- | --------------------------------------------------------------- |
+| **Handler**            | A special task triggered by other tasks                         |
+| **notify**             | Tells Ansible to call the handler if the task changes something |
+| **One-time execution** | Handlers run **once**, even if notified multiple times          |
+| **Efficient**          | Prevents unnecessary service restarts                           |
+
+✅ What is when in Ansible?
+The when statement in Ansible is used to apply conditional logic to tasks, handlers, or blocks.
+A task will only run if the condition in when evaluates to true.
+✅ Basic Syntax
+- name: Install Apache only on RedHat
+  yum:
+    name: httpd
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+✅ Use Cases for when
+| Use Case                 | Example                                           |
+| ------------------------ | ------------------------------------------------- |
+| OS-based task execution  | Install `httpd` on RedHat, `apache2` on Ubuntu    |
+| Hostname-specific logic  | Run a task only on certain servers                |
+| Variable-based condition | Install a package only if `install_package: true` |
+| Loop condition           | Skip items conditionally inside loops             |
+
+✅ Examples
+🔹 1. OS-specific Tasks
+- name: Install Apache (RedHat)
+  yum:
+    name: httpd
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install Apache (Debian)
+  apt:
+    name: apache2
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == "Debian"
+
+🔹 2. Conditional with Variables
+- name: Install Nginx if requested
+  apt:
+    name: nginx
+    state: present
+  when: install_nginx | default(false)
+| default(false) prevents undefined variable errors.
+
+🔹 3. Conditional with Inventory Hostname
+- name: Restart service only on app-server-1
+  service:
+    name: app
+    state: restarted
+  when: inventory_hostname == "app-server-1"
+
+🔹 4. Condition Inside a Loop
+- name: Create selected users
+  user:
+    name: "{{ item.name }}"
+    state: present
+  loop:
+    - { name: "ravi", active: true }
+    - { name: "john", active: false }
+  when: item.active
+
+✅ Complex Conditions (AND, OR, NOT)
+🔸 AND Condition
+when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution_major_version'] == "8"
+
+🔸 OR Condition
+when: ansible_facts['os_family'] == "Debian" or ansible_facts['os_family'] == "Ubuntu"
+
+🔸 NOT Condition
+when: not disable_firewall | default(false)
+
+✅ Using when with Handlers and Blocks
+Handler Example
+handlers:
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted
+    when: ansible_facts['os_family'] == "RedHat"
+
+Block with Condition
+- name: Configure webserver block
+  block:
+    - name: Install packages
+      yum:
+        name: httpd
+        state: present
+    - name: Start service
+      service:
+        name: httpd
+        state: started
+  when: ansible_facts['os_family'] == "RedHat"
+
+✅ Summary Table
+| Feature            | Usage                                    |
+| ------------------ | ---------------------------------------- |
+| `when:`            | Add condition to any task/handler/block  |
+| With facts         | Use `ansible_facts['os_family']`, etc.   |
+| With vars          | Use variables from inventory or playbook |
+| With loop items    | Use `item.key` in `when:`                |
+| Logical conditions | Use `and`, `or`, `not`                   |
+
+✅ Why Use Loops in Ansible?
+Loops allow you to repeat a task multiple times with different values — such as:
+Creating multiple users
+Installing multiple packages
+Managing files, services, etc.
+✅ 1. with_items Loop (Legacy but still supported)
+🔹 Basic Syntax
+- name: Install multiple packages (YUM)
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - httpd
+    - vim
+    - git
+
+item is a reserved keyword that changes with each loop iteration.
+✅ 2. loop (Modern & Recommended)
+🔹 Same example using loop:
+- name: Install multiple packages (YUM)
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - httpd
+    - vim
+    - git
+
+✅ loop is newer and more powerful, supporting nested data and advanced filters.
+
+✅ 3. Looping Over Dictionaries (Key-Value Pairs)
+- name: Create users
+  user:
+    name: "{{ item.name }}"
+    shell: "{{ item.shell }}"
+    state: present
+  loop:
+    - { name: "ravi", shell: "/bin/bash" }
+    - { name: "john", shell: "/bin/zsh" }
+
+✅ 4. Loop with when (Conditional Looping)
+- name: Create active users only
+  user:
+    name: "{{ item.name }}"
+    state: present
+  loop:
+    - { name: "alice", active: true }
+    - { name: "bob", active: false }
+  when: item.active
+
+✅ 5. Loop with index_var
+Keep track of the index (loop count):
+- name: Create numbered files
+  copy:
+    content: "File number {{ idx }}"
+    dest: "/tmp/file_{{ idx }}.txt"
+  loop:
+    - one
+    - two
+    - three
+  loop_control:
+    index_var: idx
+
+✅ 6. Looping Over Files in a Directory
+- name: Deploy all config files
+  copy:
+    src: "files/{{ item }}"
+    dest: "/etc/myapp/{{ item }}"
+  loop: "{{ lookup('fileglob', 'files/*.conf', wantlist=True) }}"
+
+✅ 7. Nested Loops (loop with subelements)
+- name: Add multiple groups per user
+  user:
+    name: "{{ item.0 }}"
+    groups: "{{ item.1 }}"
+  loop:
+    - [ "alice", "wheel" ]
+    - [ "bob", "admin" ]
+
+✅ 8. Loop with Templates
+- name: Deploy templated config files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: "nginx.conf.j2", dest: "/etc/nginx/nginx.conf" }
+    - { src: "app.conf.j2", dest: "/etc/myapp/app.conf" }
+
+✅ loop_control Options
+| Option      | Description                                                |
+| ----------- | ---------------------------------------------------------- |
+| `index_var` | Custom variable to track loop index                        |
+| `label`     | Custom display label for output                            |
+| `pause`     | Delay between loop iterations (useful in rolling restarts) |
+
+✅ Summary Table
+| Feature        | Use Case                              |
+| -------------- | ------------------------------------- |
+| `with_items`   | Legacy looping (simple lists)         |
+| `loop`         | Modern looping (recommended)          |
+| `loop_control` | Advanced display, tracking index      |
+| `when + loop`  | Conditional looping                   |
+| Nested loops   | Iterate over pairs or structured data |
+
+✅ What Are Tags in Ansible?
+Tags allow you to run only specific tasks or roles in a playbook instead of running everything.
+This is useful for:
+Faster testing
+Partial execution
+Task separation (e.g., install, config, restart)
+✅ Syntax: Adding Tags
+🔹 Task-Level Tag
+- name: Install Apache
+  apt:
+    name: apache2
+    state: present
+  tags: install
+
+🔹 Multiple Tags
+- name: Start Apache service
+  service:
+    name: apache2
+    state: started
+  tags:
+    - start
+    - webserver
+
+✅ How to Run Tags
+You can limit playbook execution to specific tags using:
+# ansible-playbook playbook.yml --tags "install"
+➡️ Only tasks with the tag install will run.
+✅ Skip Tags
+# ansible-playbook playbook.yml --skip-tags "restart"
+➡️ Runs everything except tasks tagged with restart.
+✅ Tags in Playbook Blocks
+- name: Webserver setup block
+  block:
+    - name: Install packages
+      apt:
+        name: nginx
+        state: present
+
+    - name: Enable service
+      service:
+        name: nginx
+        enabled: true
+        state: started
+  tags: web
+✅ All tasks inside the block inherit the tag web.
+
+✅ Tags in Roles
+In your playbook:
+- name: Apply webserver role
+  hosts: web
+  roles:
+    - { role: apache, tags: ["apache", "install"] }
+➡️ You can run just this role with:
+# ansible-playbook site.yml --tags "apache"
+✅ List All Tags in a Playbook
+# ansible-playbook playbook.yml --list-tags
+Sample output:
+playbook: playbook.yml
+
+  play #1 (webservers): webserver config
+    TASK TAGS: [install, start, config, restart]
+
+✅ Practical Example
+- name: Apache Web Server Setup
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+      tags: install
+
+    - name: Configure Apache
+      template:
+        src: apache.conf.j2
+        dest: /etc/apache2/apache2.conf
+      tags: config
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+      tags: restart
+
+To only run the config step:
+# ansible-playbook webserver.yml --tags config
+
+✅ Summary Table
+| Tag Use Case            | Command                      |
+| ----------------------- | ---------------------------- |
+| Run only install tasks  | `--tags install`             |
+| Skip restart tasks      | `--skip-tags restart`        |
+| List all available tags | `--list-tags`                |
+| Tag block or role       | Add `tags:` to block or role |
+
+🧮 What Are Variables in Ansible?
+Variables in Ansible are placeholders used to store values such as usernames, file paths, package names, IP addresses, etc.
+They make playbooks dynamic, reusable, and easy to maintain.
+✅ Why Use Variables?
+Avoid hardcoding values
+Make automation flexible across environments (dev, staging, prod)
+Reuse logic for different hosts or groups
+🔹 Types of Variables in Ansible
+| Variable Type          | Defined Where                               | Example Use                          |
+| ---------------------- | ------------------------------------------- | ------------------------------------ |
+| **Playbook Vars**      | Inside a playbook (`vars:` block)           | `pkg_name: nginx`                    |
+| **Inventory Vars**     | In inventory or `host_vars/`, `group_vars/` | `ansible_user=ubuntu`                |
+| **Extra Vars**         | Passed via CLI                              | `--extra-vars "env=prod"`            |
+| **Registered Vars**    | Store output of a task                      | `register: result`                   |
+| **Role Vars/Defaults** | Inside roles                                | `defaults/main.yml`, `vars/main.yml` |
+
+📘 1. Playbook Variables Example
+- name: Install a package
+  hosts: web
+  vars:
+    pkg_name: nginx
+  tasks:
+    - name: Install package
+      apt:
+        name: "{{ pkg_name }}"
+        state: present
+
+📁 2. Inventory Variables
+A) In hosts file:
+[web]
+server1 ansible_host=192.168.1.10 ansible_user=ubuntu pkg_name=apache2
+B) In group_vars/ or host_vars/ directory:
+group_vars/web.yml:
+pkg_name: apache2
+Ansible will automatically load these based on the host or group.
+
+🚀 3. Extra Variables (from CLI)
+Used to pass or override variables at runtime.
+# ansible-playbook playbook.yml --extra-vars "pkg_name=nginx"
+JSON format:
+# ansible-playbook playbook.yml --extra-vars '{"pkg_name": "nginx", "port": 80}'
+
+📥 4. Registered Variables
+Used to store the output of a command or module to be reused later in the play.
+- name: Check uptime
+  command: uptime
+  register: uptime_result
+
+- name: Show uptime
+  debug:
+    msg: "Uptime is {{ uptime_result.stdout }}"
+
+📦 5. Role Variables (Defaults and Vars)
+Inside a role:
+defaults/main.yml – lowest priority
+vars/main.yml – higher priority
+# defaults/main.yml
+app_port: 8080
+# vars/main.yml
+app_port: 9090
+
+⚠ Variable Precedence (High to Low)
+Extra vars (--extra-vars)
+Task-level vars
+Block-level vars
+Role vars
+Inventory (host/group)
+Playbook vars
+Role defaults
+🏆 Highest wins if there is a name conflict.
+
+📌 Best Practices
+Use group_vars/ and host_vars/ for per-host and per-group configs.
+Use vars: in playbooks for simple cases.
+Avoid hardcoding values.
+Use --extra-vars for temporary overrides.
+
+🧠 What Are Ansible Facts?
+Facts are system properties that Ansible automatically collects from managed nodes.
+They include information like:
+Hostname
+IP address
+OS type/version
+CPU, memory
+Network interfaces
+Disk layout
+Environment variables
+These are used to make decisions dynamically in playbooks.
+
+📦 How Are Facts Collected?
+Ansible uses the built-in setup module to gather facts from a host.
+When a playbook runs, it does this by default unless you disable it:
+- name: Gather system facts
+  hosts: all
+  gather_facts: yes
+
+🛑 Disable Fact Gathering
+If you want faster playbooks and don’t need system facts:
+- name: Skip fact gathering
+  hosts: all
+  gather_facts: no
+
+You can still manually gather them later:
+- name: Gather facts manually
+  ansible.builtin.setup:
+
+🔍 Viewing Facts
+Command to view all facts:
+# ansible all -m setup
+
+Filter specific facts:
+# ansible all -m setup -a "filter=ansible_hostname"
+
+🧪 Example: Using Facts in a Playbook
+- hosts: all
+  tasks:
+    - name: Show OS distribution
+      debug:
+        msg: "This host is running {{ ansible_facts['distribution'] }}"
+
+    - name: Show IP address
+      debug:
+        msg: "Primary IP is {{ ansible_default_ipv4.address }}"
+
+✅ Common Facts
+| Fact                           | Meaning                  |
+| ------------------------------ | ------------------------ |
+| `ansible_hostname`             | Hostname of system       |
+| `ansible_distribution`         | OS name (Ubuntu, CentOS) |
+| `ansible_distribution_version` | OS version               |
+| `ansible_default_ipv4.address` | Primary IP               |
+| `ansible_processor`            | CPU model                |
+| `ansible_memtotal_mb`          | Total RAM (in MB)        |
+| `ansible_mounts`               | Disk/mount info          |
+| `ansible_interfaces`           | List of interfaces       |
+
+🔁 Use Facts for Conditional Tasks
+- name: Install package based on OS
+  yum:
+    name: httpd
+    state: present
+  when: ansible_facts['distribution'] == "CentOS"
+
+🧩 How to Store or Use Facts
+You can also register custom facts or save facts with set_fact:
+- name: Set custom fact
+  set_fact:
+    my_custom_var: "Hello World"
+
+- debug:
+    var: my_custom_var
+
+📌 Summary
+| Topic          | Description                                   |
+| -------------- | --------------------------------------------- |
+| `gather_facts` | Enables auto-collection of system data        |
+| `setup` module | Behind-the-scenes module to collect facts     |
+| Use Cases      | OS detection, IP filtering, conditional tasks |
+| Default        | `gather_facts: yes` unless overridden         |
+| Manual trigger | Use `-m setup` or `ansible.builtin.setup:`    |
+
+🔐 What is Ansible Vault?
+Ansible Vault is a feature that allows you to encrypt sensitive data such as:
+Passwords
+API keys
+SSH private keys
+TLS certificates
+Any confidential YAML or variable file
+Encrypted content can be safely committed to version control systems like Git.
+
+🧰 Use Cases
+Encrypt inventory variables (e.g., group_vars/all/vault.yml)
+Secure entire playbooks or templates
+Hide credentials from logs and users
+
+📌 Basic Vault Commands
+1. Create an Encrypted File
+# ansible-vault create secrets.yml
+You’ll be prompted to enter a password. A file editor will open to add secret content.
+
+2. Edit an Encrypted File
+# ansible-vault edit secrets.yml
+
+3. View an Encrypted File
+# ansible-vault view secrets.yml
+
+4. Re-encrypt With New Password 
+# ansible-vault rekey secrets.yml
+
+5. Encrypt an Existing File
+# ansible-vault encrypt plaintext.yml
+
+6. Decrypt a File
+# ansible-vault decrypt secrets.yml
+
+🔐 Example: Encrypting Variable Files
+📁 group_vars/all/vault.yml (encrypted) 
+db_password: "SuperSecretP@ssw0rd"
+Encrypt it:
+# ansible-vault encrypt group_vars/all/vault.yml
+Then reference in your playbook:
+- name: Use vaulted variable
+  hosts: dbservers
+  vars_files:
+    - group_vars/all/vault.yml
+  tasks:
+    - name: Show password
+      debug:
+        msg: "Password is {{ db_password }}"
+
+🛠 Using Vault in Playbooks
+Run the playbook with password prompt:
+# ansible-playbook secure-playbook.yml --ask-vault-pass
+
+Or use a password file (not recommended for shared environments):
+# ansible-playbook secure-playbook.yml --vault-password-file ~/.vault_pass.txt
+
+🔄 Encrypt Multiple Files
+# ansible-vault encrypt vars1.yml vars2.yml creds.yml
+
+🔐 Vault ID (For Multiple Passwords)
+For scenarios with different vaults per environment (e.g., dev, prod):
+# ansible-playbook site.yml --vault-id dev@vault_pass_dev.txt --vault-id prod@vault_pass_prod.txt
+
+Each encrypted file can specify its Vault ID:
+$ANSIBLE_VAULT;1.2;AES256;dev
+
+🔎 Example Workflow Summary
+Store credentials in group_vars/prod/vault.yml
+Encrypt with ansible-vault encrypt
+Reference the file in your playbook using vars_files
+Run with --ask-vault-pass or --vault-password-file
+
+🧱 Best Practices
+Use group_vars/ and host_vars/ for storing sensitive values
+Use Vault IDs for environments (dev, staging, prod)
+Never commit .vault_pass.txt to Git
+Prefer encrypted variable files, not full playbooks
+
+📁 What are Ansible Roles?
+Roles are a structured way to organize playbooks and related files for reusability, scalability, and maintainability.
+Roles allow you to automatically load:
+Variables
+Tasks
+Handlers
+Templates
+Files
+Defaults
+Meta data
+Think of roles as reusable building blocks for your automation tasks.
+🧱 Directory Structure of a Role
+Each role is a self-contained directory structure like this:
+roles/
+├── webserver/
+│   ├── tasks/
+│   │   └── main.yml
+│   ├── handlers/
+│   │   └── main.yml
+│   ├── templates/
+│   │   └── index.html.j2
+│   ├── files/
+│   │   └── httpd.conf
+│   ├── vars/
+│   │   └── main.yml
+│   ├── defaults/
+│   │   └── main.yml
+│   └── meta/
+│       └── main.yml
+
+📌 Purpose of Each Directory
+| Directory    | Purpose                          |
+| ------------ | -------------------------------- |
+| `tasks/`     | Main list of tasks to execute    |
+| `handlers/`  | Handlers called by `notify:`     |
+| `templates/` | Jinja2 templates (e.g., configs) |
+| `files/`     | Static files to copy             |
+| `vars/`      | Variables with high priority     |
+| `defaults/`  | Default variables (low priority) |
+| `meta/`      | Role dependencies and metadata   |
+
+🛠 Create a Role (Manually or with Command)
+# ansible-galaxy init roles/webserver
+This generates the directory structure automatically.
+
+📘 Example Role: webserver
+1. roles/webserver/tasks/main.yml:
+---
+- name: Install Apache
+  apt:
+    name: apache2
+    state: present
+  notify: Restart Apache
+
+- name: Deploy index.html
+  template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+
+2. roles/webserver/handlers/main.yml:
+---
+- name: Restart Apache
+  service:
+    name: apache2
+    state: restarted
+
+3. roles/webserver/templates/index.html.j2:
+<html>
+  <head><title>{{ web_title }}</title></head>
+  <body><h1>Welcome to {{ web_title }}</h1></body>
+</html>
+
+4. roles/webserver/defaults/main.yml:
+---
+web_title: "My Default Website"
+
+▶️ Using the Role in a Playbook
+---
+- name: Deploy web server using role
+  hosts: webservers
+  become: yes
+
+  roles:
+    - webserver
+
+✅ Benefits of Using Roles
+| Benefit   | Description                             |
+| --------- | --------------------------------------- |
+| Reusable  | Write once, use in many playbooks       |
+| Organized | Clean and standardized directory layout |
+| Scalable  | Easy to manage in large environments    |
+| Shareable | Share via **Ansible Galaxy** or Git     |
+
+📦 Downloading Roles from Ansible Galaxy
+# ansible-galaxy install geerlingguy.apache
+Then use it in your playbook like:
+roles:
+  - geerlingguy.apache
+🧩 Advanced: Role Dependencies (meta/main.yml)
+---
+dependencies:
+  - role: firewall
+  - role: monitoring
+
+This ensures those roles are applied before the current one.
+🔚 Summary
+| Feature                | Description                            |
+| ---------------------- | -------------------------------------- |
+| `ansible-galaxy init`  | Creates the role skeleton              |
+| `roles/`               | Directory to organize all roles        |
+| `main.yml`             | Entrypoint in each section             |
+| `templates/`, `files/` | For dynamic/static configuration files |
+| `handlers/`            | Define restart/reload services         |
+| `defaults/` vs `vars/` | Defaults < Vars in priority            |
+
+📌 What is ansible-galaxy?
+ansible-galaxy is a CLI tool to:
+Create role scaffolding (directory structure)
+Download roles from Ansible Galaxy
+Manage dependencies between roles
+Share reusable roles publicly or internally
+
+✅ Step-by-Step: Creating and Using Roles
+🔧 1. Create a Role Structure
+Use the ansible-galaxy init command:
+# ansible-galaxy init myrole
+This creates a directory like:
+myrole/
+├── defaults/
+│   └── main.yml
+├── files/
+├── handlers/
+│   └── main.yml
+├── meta/
+│   └── main.yml
+├── tasks/
+│   └── main.yml
+├── templates/
+├── tests/
+│   ├── inventory
+│   └── test.yml
+├── vars/
+│   └── main.yml
+You can also initialize inside a roles/ directory:
+mkdir roles && cd roles
+# ansible-galaxy init nginx
+
+🧱 2. Write Role Logic
+Example: roles/nginx/tasks/main.yml
+---
+- name: Install NGINX
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Start and enable NGINX
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+✏️ 3. Use the Role in a Playbook
+---
+- name: Setup NGINX using a role
+  hosts: web
+  become: yes
+
+  roles:
+    - nginx
+
+Run it:
+# ansible-playbook nginx-playbook.yml -i inventory
+
+📦 4. Download Roles from Galaxy
+Search roles:
+# ansible-galaxy search apache
+Install a role:
+# ansible-galaxy install geerlingguy.apache
+
+By default, roles go to: ~/.ansible/roles/
+Use it in your playbook:
+roles:
+  - geerlingguy.apache
+
+You can also specify a custom roles path:
+# ansible-playbook playbook.yml -i inventory --roles-path ./roles
+
+🔄 5. Install Roles via requirements.yml
+Create a requirements.yml:
+- src: geerlingguy.nginx
+- src: git+https://github.com/yourcompany/yourrole.git
+  version: master
+  name: customrole
+
+Install with:
+# ansible-galaxy install -r requirements.yml
+
+🧩 6. Role Dependencies (meta/main.yml)
+---
+dependencies:
+  - role: geerlingguy.firewall
+  - role: geerlingguy.repo-epel
+
+This ensures dependencies are applied before your role.
+
+
+🧪 Testing a Role
+Inside the tests/ folder:
+tests/inventory
+# localhost ansible_connection=local
+
+tests/test.yml
+---
+- name: Test nginx role
+  hosts: localhost
+  become: yes
+  roles:
+    - nginx
+
+Run:
+# ansible-playbook tests/test.yml -i tests/inventory
+
+✅ Summary
+| Command                  | Purpose                         |
+| ------------------------ | ------------------------------- |
+| `ansible-galaxy init`    | Create a role scaffold          |
+| `ansible-galaxy install` | Download roles                  |
+| `--roles-path`           | Use custom role directory       |
+| `requirements.yml`       | Define list of roles to install |
+| `meta/main.yml`          | Manage role dependencies        |
+
+🎯 Why Use Role Dependencies?
+To reuse roles instead of duplicating logic.
+To make roles modular and interdependent cleanly.
+To handle setup chains, e.g., mysql_client depends on mysql_repo.
+
+📁 Where to Define Role Dependencies
+Dependencies are defined in a role’s:
+roles/your_role/meta/main.yml
+
+📘 Syntax of meta/main.yml
+---
+dependencies:
+  - role: geerlingguy.repo-epel
+  - role: firewall
+    vars:
+      allowed_ports:
+        - "22"
+        - "80"
+        - "443"
+
+Explanation:
+role: – Name of the dependent role
+vars: – (Optional) Variables to pass to the dependent role
+
+🧱 Example Project Structure
+site.yml
+inventory
+roles/
+├── webserver/
+│   └── meta/main.yml   # Depends on common and firewall roles
+├── common/
+├── firewall/
+
+roles/webserver/meta/main.yml
+---
+dependencies:
+  - role: common
+  - role: firewall
+    vars:
+      firewall_allowed_tcp_ports:
+        - 22
+        - 80
+
+site.yml (Playbook)
+---
+- name: Setup Web Server
+  hosts: web
+  become: yes
+  roles:
+    - webserver
+
+📌 Now, when webserver runs, Ansible automatically includes common and firewall roles before it.
+
+📦 Galaxy Roles with Dependencies
+When downloading a role from Ansible Galaxy, dependencies (declared in meta/main.yml) are automatically installed.
+You can also use:
+# ansible-galaxy install -r requirements.yml
+
+🎯 Purpose of defaults and vars in Roles
+| Location            | Purpose                                                                        | Priority             |
+| ------------------- | ------------------------------------------------------------------------------ | -------------------- |
+| `defaults/main.yml` | Define the **lowest-priority** variables (user-overridable defaults)           | Lowest               |
+| `vars/main.yml`     | Define **high-priority** variables that typically **should not be overridden** | Higher than defaults |
+
+📁 Role Directory Structure
+roles/
+└── myrole/
+    ├── defaults/
+    │   └── main.yml    # Low priority defaults
+    ├── vars/
+    │   └── main.yml    # Higher priority vars
+    ├── tasks/
+    │   └── main.yml
+
+✅ 1. defaults/main.yml – Default Variables
+roles/myrole/defaults/main.yml
+---
+package_name: nginx
+service_name: nginx
+Used when you want end users to override these variables in inventory, extra vars, or playbooks.
+
+✅ 2. vars/main.yml – Static, High-Priority Variables
+roles/myrole/vars/main.yml
+---
+config_file_path: /etc/nginx/nginx.conf
+Used when you want to enforce values that should not be easily overridden.
+
+🛠 Usage in Tasks
+roles/myrole/tasks/main.yml
+---
+- name: Install package
+  apt:
+    name: "{{ package_name }}"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Copy config
+  copy:
+    src: default.conf
+    dest: "{{ config_file_path }}"
+
+🔄 Precedence: Variable Priority (low to high)
+Role defaults/main.yml
+Inventory group_vars, host_vars
+Playbook vars
+Role vars/main.yml
+Extra vars (-e on CLI) → highest
+
+📌 When to Use What?
+| Use case                    | Use `defaults/` | Use `vars/` |
+| --------------------------- | --------------- | ----------- |
+| Allow user override         | ✅ Yes           | ❌ No        |
+| Set internal values only    | ❌ No            | ✅ Yes       |
+| Reusability and flexibility | ✅ Yes           | ❌ No        |
+| Fixed role-wide settings    | ❌ No            | ✅ Yes       |
+
+✅ Example: Overriding defaults in a Playbook
+- hosts: web
+  become: yes
+  roles:
+    - role: myrole
+      vars:
+        package_name: apache2  # This will override the default nginx
+
+📦 What Are Ansible Collections?
+Ansible collections are bundles of:
+Roles
+Modules
+Plugins
+Playbooks
+Documentation
+They're a way to package and distribute reusable automation content.
+✅ Example: community.mysql, amazon.aws, kubernetes.core
+
+🌐 What is Ansible Galaxy?
+Ansible Galaxy is the official hub for sharing Ansible content like:
+Roles (ansible-galaxy install)
+Collections (ansible-galaxy collection install)
+🔗 Website: https://galaxy.ansible.com
+
+📥 Installing Collections from Galaxy
+👉 Install a Collection
+# ansible-galaxy collection install community.mysql
+
+🔄 Install from requirements.yml
+# requirements.yml
+collections:
+  - name: community.mysql
+  - name: amazon.aws
+    version: "6.4.0"
+
+# ansible-galaxy collection install -r requirements.yml
+
+📁 Collection Path
+After installation, collections are stored at:
+# ~/.ansible/collections/
+Or in /usr/share/ansible/collections/ for system-wide installs.
+
+🧩 Using Collection Content in Playbooks
+✅ Referencing a module from a collection
+- name: Create MySQL database
+  hosts: db
+  collections:
+    - community.mysql
+  tasks:
+    - name: Create DB
+      community.mysql.mysql_db:
+        name: mydb
+        state: present
+
+🛠 Creating Your Own Collection (Custom Modules/Plugins)
+# ansible-galaxy collection init my_namespace.my_collection
+
+Creates structure like: 
+my_namespace/my_collection/
+├── plugins/
+│   └── modules/
+│       └── my_module.py
+├── roles/
+│   └── my_role/
+├── docs/
+├── galaxy.yml
+
+✏️ Custom Module Example
+my_namespace/my_collection/plugins/modules/hello_world.py
+from ansible.module_utils.basic import AnsibleModule
+
+def run_module():
+    module = AnsibleModule(
+        argument_spec=dict(name=dict(type='str', required=True))
+    )
+    result = dict(
+        changed=False,
+        message=f"Hello {module.params['name']}!"
+    )
+    module.exit_json(**result)
+
+def main():
+    run_module()
+
+if __name__ == '__main__':
+    main()
+
+Use it in your playbook:
+- hosts: localhost
+  tasks:
+    - name: Run custom hello module
+      my_namespace.my_collection.hello_world:
+        name: Rakesh
+
+🔌 Custom Plugins in Collections
+You can also create:
+| Type              | Path                 |
+| ----------------- | -------------------- |
+| Filter plugins    | `plugins/filter/`    |
+| Lookup plugins    | `plugins/lookup/`    |
+| Inventory plugins | `plugins/inventory/` |
+| Callback plugins  | `plugins/callback/`  |
+
+Example: filter_plugins/my_filters.py
+def upper_case(value):
+    return value.upper()
+
+class FilterModule(object):
+    def filters(self):
+        return {"upper_case": upper_case}
+
+Use in template:
+{{ "hello" | upper_case }}
+
+✅ Summary
+| Feature                    | Use                                                          |
+| -------------------------- | ------------------------------------------------------------ |
+| **Collections**            | Distribute full automation bundles                           |
+| **Galaxy**                 | Install shared roles & collections                           |
+| **Third-party modules**    | Use cloud/db/platform modules from Galaxy                    |
+| **Custom modules/plugins** | Create your own automation logic                             |
+| **Playbook usage**         | Use `collections:` or FQCN like `community.mysql.mysql_user` |
+
+
+💡 What are Advanced Modules?
+While basic modules like copy, file, or yum are commonly used, advanced modules offer more powerful automation capabilities for:
+| Category             | Module Examples                                            |
+| -------------------- | ---------------------------------------------------------- |
+| Cloud provisioning   | `ec2`, `gcp_compute_instance`, `azure_rm_virtualmachine`   |
+| Container management | `docker_container`, `k8s`, `podman_container`              |
+| Database management  | `mysql_db`, `postgresql_db`, `mongodb_user`                |
+| Orchestration        | `include_tasks`, `import_playbook`, `block`, `delegate_to` |
+| Networking           | `ios_config`, `nxos_config`, `netconf`, `nmcli`            |
+| Vault and Secrets    | `ansible.builtin.set_fact`, `community.hashi_vault`        |
+| GitOps & CI/CD       | `git`, `uri`, `jenkins_job`, `github_webhook`              |
+
+⚙️ Examples of Advanced Modules
+1. docker_container – Manage Containers
+- name: Deploy a Docker container
+  hosts: localhost
+  tasks:
+    - name: Run nginx
+      community.docker.docker_container:
+        name: webserver
+        image: nginx:latest
+        state: started
+        ports:
+          - "80:80"
+
+2. k8s – Interact with Kubernetes
+- name: Apply Kubernetes Pod
+  hosts: localhost
+  tasks:
+    - name: Create pod
+      kubernetes.core.k8s:
+        kubeconfig: ~/.kube/config
+        definition: "{{ lookup('file', 'pod.yaml') }}"
+
+3. mysql_user – Database User Management
+- name: Create MySQL user
+  hosts: db
+  collections:
+    - community.mysql
+  tasks:
+    - name: Ensure user exists
+      community.mysql.mysql_user:
+        name: ansibleuser
+        password: secret
+        priv: '*.*:ALL'
+        host: "%"
+        state: present
+
+4. ios_config – Manage Cisco Network Devices
+- name: Configure Cisco device
+  hosts: switches
+  gather_facts: no
+  connection: network_cli
+  tasks:
+    - name: Set hostname
+      cisco.ios.ios_config:
+        lines:
+          - hostname CORE-SWITCH
+
+5. hashi_vault – Retrieve Secrets Securely
+- name: Fetch secret from Vault
+  hosts: localhost
+  tasks:
+    - name: Read secret
+      community.hashi_vault.hashi_vault:
+        url: https://vault.example.com
+        token: "{{ vault_token }}"
+        secret: secret/data/db-creds
+        key: password
+      register: db_pass
+
+    - debug:
+        msg: "Database password is {{ db_pass.value }}"
+
+6. uri – Call REST APIs
+- name: Call REST API
+  hosts: localhost
+  tasks:
+    - name: Trigger GitHub webhook
+      uri:
+        url: https://api.github.com/repos/user/repo/dispatches
+        method: POST
+        headers:
+          Authorization: "token {{ github_token }}"
+          Content-Type: "application/json"
+        body: '{"event_type": "deploy"}'
+        body_format: json
+
+7. block + rescue – Try/Catch Like Error Handling
+- name: Handle error gracefully
+  hosts: localhost
+  tasks:
+    - block:
+        - name: Try something risky
+          command: /bin/false
+      rescue:
+        - name: Cleanup after failure
+          debug:
+            msg: "Something went wrong"
+
+🧩 Pro Tip: Use collections to unlock many advanced modules
+Install:
+# ansible-galaxy collection install community.docker community.mysql kubernetes.core
+📌 Summary Table
+| Module             | Function                          | Collection Required     |
+| ------------------ | --------------------------------- | ----------------------- |
+| `docker_container` | Manage Docker containers          | `community.docker`      |
+| `k8s`              | Manage Kubernetes resources       | `kubernetes.core`       |
+| `mysql_user`       | Manage MySQL users                | `community.mysql`       |
+| `ios_config`       | Manage Cisco devices              | `cisco.ios`             |
+| `hashi_vault`      | Read secrets from HashiCorp Vault | `community.hashi_vault` |
+| `uri`              | Call REST APIs                    | built-in                |
+| `block`/`rescue`   | Error handling                    | built-in                |
+
+🐳 Docker Modules in Ansible
+To use Docker modules, install the community.docker collection:
+# ansible-galaxy collection install community.docker
+🔧 Common Docker Modules
+| Module             | Purpose                         |
+| ------------------ | ------------------------------- |
+| `docker_container` | Create/manage Docker containers |
+| `docker_image`     | Build or pull images            |
+| `docker_network`   | Manage Docker networks          |
+| `docker_volume`    | Manage volumes                  |
+
+✅ Example: Start an NGINX Docker container
+- name: Run NGINX Docker container
+  hosts: localhost
+  tasks:
+    - name: Start container
+      community.docker.docker_container:
+        name: nginx
+        image: nginx:latest
+        ports:
+          - "80:80"
+        state: started
+
+✅ Example: Build and run a custom image
+- name: Build and run Docker image
+  hosts: localhost
+  tasks:
+    - name: Build custom image
+      community.docker.docker_image:
+        name: myapp
+        build:
+          path: ./app
+
+    - name: Run container
+      community.docker.docker_container:
+        name: myapp
+        image: myapp
+        state: started
+
+☸️ Kubernetes Modules in Ansible
+To use Kubernetes modules, install the kubernetes.core collection:
+# ansible-galaxy collection install kubernetes.core
+Ensure kubectl and access to the ~/.kube/config are available.
+
+🔧 Common Kubernetes Modules
+| Module     | Purpose                              |
+| ---------- | ------------------------------------ |
+| `k8s`      | Create/update/delete k8s resources   |
+| `k8s_info` | Retrieve information about resources |
+| `helm`     | Manage Helm charts                   |
+
+✅ Example: Deploy Kubernetes Pod from YAML file
+- name: Apply pod YAML
+  hosts: localhost
+  tasks:
+    - name: Deploy pod
+      kubernetes.core.k8s:
+        kubeconfig: ~/.kube/config
+        state: present
+        definition: "{{ lookup('file', 'nginx-pod.yaml') }}"
+
+nginx-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+
+✅ Example: Create a Deployment directly in playbook
+- name: Create Kubernetes Deployment
+  hosts: localhost
+  tasks:
+    - name: Create Deployment
+      kubernetes.core.k8s:
+        kubeconfig: ~/.kube/config
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: web-deploy
+          spec:
+            replicas: 2
+            selector:
+              matchLabels:
+                app: web
+            template:
+              metadata:
+                labels:
+                  app: web
+              spec:
+                containers:
+                - name: nginx
+                  image: nginx:latest
+                  ports:
+                  - containerPort: 80
+
+🧠 Key Differences
+| Feature    | Docker Module                      | Kubernetes Module                        |
+| ---------- | ---------------------------------- | ---------------------------------------- |
+| Target     | Local/remote Docker engine         | Kubernetes cluster via kubeconfig        |
+| Modules    | `docker_container`, `docker_image` | `k8s`, `k8s_info`, `helm`                |
+| Complexity | Simple single-host container tasks | Declarative, scalable cluster management |
+| Use Cases  | CI/CD, local dev, standalone apps  | Microservices, cloud-native apps         |
+
+🔌 12. Plugins in Ansible
+In Ansible, plugins are pieces of code that augment the core functionality. 
+They're used in nearly all parts of Ansible's execution engine to add flexibility and extensibility. 
+There are many types of plugins in Ansible—here’s a breakdown of the most commonly used ones, including custom plugin development with examples.
+✅ 1. Callback Plugins
+Purpose: Control how Ansible output is displayed, or take actions during playbook execution (like sending notifications).
+Examples:
+default: Standard console output.
+json, minimal, yaml, etc.
+slack: Sends messages to Slack.
+Use Case: Logging output to a file or sending notifications.
+Enable a callback plugin:
+# ansible.cfg
+[defaults]
+stdout_callback = yaml
+callback_whitelist = profile_tasks
+
+Example: Enable profiling plugin to show task execution time
+[defaults]
+callback_whitelist = profile_tasks
+
+✅ 2. Connection Plugins
+Purpose: Handle communication between the control node and the managed nodes.
+Examples:
+ssh: Default.
+local: Executes locally.
+docker, chroot, winrm, paramiko.
+Use Case: Manage Docker containers or Windows hosts.
+Example: Run a playbook on the local machine
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Print message
+      debug:
+        msg: "Running locally!"
+
+✅ 3. Lookup Plugins
+Purpose: Fetch data from external sources (files, environment vars, etc.).
+Examples:
+file, env, passwordstore, pipe, redis, csvfile, consul.
+Use Case: Load secrets, passwords, or configs from external sources.
+Example: Lookup a file’s contents
+- debug:
+    msg: "{{ lookup('file', '/etc/hostname') }}"
+
+Example: Fetch environment variable
+- debug:
+    msg: "{{ lookup('env', 'HOME') }}"
+
+✅ 4. Filter Plugins
+Purpose: Transform data in Jinja2 templates or variables.
+Examples:
+to_yaml, regex_replace, map, unique, flatten, random.
+Use Case: Data manipulation in templates and playbooks.
+Example: Uppercase a string
+- debug:
+    msg: "{{ 'linuxadmin' | upper }}"
+
+Example: Sort a list
+- debug:
+    msg: "{{ [3, 2, 1] | sort }}"
+
+🛠️ Custom Plugin Development in Ansible
+You can create custom plugins to extend Ansible's functionality. Here's how to create one for each type:
+🎯 Example: Custom Filter Plugin
+Goal: Create a filter that reverses a string.
+📁 Directory Structure:
+filter_plugins/
+  reverse_filter.py
+
+🔹 reverse_filter.py:
+def reverse_string(value):
+    return value[::-1]
+
+class FilterModule(object):
+    def filters(self):
+        return {
+            'reverse': reverse_string
+        }
+🔹 Use in playbook:
+- hosts: localhost
+  vars:
+    my_string: "Ansible"
+  tasks:
+    - debug:
+        msg: "{{ my_string | reverse }}"
+➡️ Output:
+"elbinsA"
+
+🎯 Example: Custom Lookup Plugin
+Goal: Create a lookup plugin that returns current system time.
+📁 Directory Structure:
+lookup_plugins/
+  current_time.py
+
+🔹 current_time.py:
+from ansible.plugins.lookup import LookupBase
+from datetime import datetime
+
+class LookupModule(LookupBase):
+    def run(self, terms, variables=None, **kwargs):
+        return [datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+
+🔹 Use in playbook:
+- hosts: localhost
+  tasks:
+    - debug:
+        msg: "{{ lookup('current_time') }}"
+
+🧩 Notes on Custom Plugins:
+Place the plugin file in the proper directory:
+filter_plugins/
+lookup_plugins/
+callback_plugins/
+etc.
+You can set the plugin path in ansible.cfg:
+[defaults]
+filter_plugins = ./filter_plugins
+lookup_plugins = ./lookup_plugins
+
+🔚 Summary
+| Plugin Type       | Purpose                                      | Example                                   |
+| ----------------- | -------------------------------------------- | ----------------------------------------- |
+| Callback Plugin   | Modify/playback output or send notifications | `profile_tasks`, `slack`, `json`          |
+| Connection Plugin | Control connection to hosts                  | `ssh`, `local`, `docker`                  |
+| Lookup Plugin     | Fetch external data                          | `file`, `env`, custom like `current_time` |
+| Filter Plugin     | Modify data using Jinja filters              | `upper`, `lower`, custom like `reverse`   |
+
+🔧 14. Advanced Playbook Features in Ansible
+✅ 1. Tags
+Purpose: Run specific tasks by tagging them.
+🔹 Example:
+- hosts: all
+  tasks:
+    - name: Install Apache
+      yum:
+        name: httpd
+        state: present
+      tags: web
+
+    - name: Install MariaDB
+      yum:
+        name: mariadb-server
+        state: present
+      tags: db
+
+🧪 Run only tasks with web tag:
+# ansible-playbook site.yml --tags web
+
+🧪 Skip tasks with db tag:
+# ansible-playbook site.yml --skip-tags db
+
+✅ 2. Blocks
+Purpose: Group related tasks, especially useful for error handling and conditional execution.
+🔹 Example:
+- hosts: all
+  tasks:
+    - name: Install Web Stack
+      block:
+        - name: Install Apache
+          yum:
+            name: httpd
+            state: present
+
+        - name: Start Apache
+          service:
+            name: httpd
+            state: started
+
+✅ 3. Handlers
+Purpose: Run tasks only when notified (typically used for restarting services after a config change).
+🔹 Example:
+- hosts: all
+  tasks:
+    - name: Update Apache config
+      copy:
+        src: httpd.conf
+        dest: /etc/httpd/conf/httpd.conf
+      notify: Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: httpd
+        state: restarted
+
+⏳ The handler runs only if the task reports a "changed" status.
+
+✅ 4. Error Handling (block, rescue, always)
+Purpose: Handle failures gracefully using rescue and ensure cleanups using always.
+🔹 Example:
+- hosts: all
+  tasks:
+    - name: Try to run risky command
+      block:
+        - name: Run a risky command
+          command: /bin/false
+      rescue:
+        - name: Handle the failure
+          debug:
+            msg: "Command failed, but we recovered"
+      always:
+        - name: Always run cleanup
+          debug:
+            msg: "This always runs"
+
+✅ 5. Asynchronous Tasks
+Purpose: Run long-running tasks in the background.
+🔹 Example:
+- hosts: all
+  tasks:
+    - name: Run script in background
+      shell: /usr/local/bin/long_task.sh
+      async: 300
+      poll: 0
+
+async: 300: Run for up to 300 seconds.
+poll: 0: Don't wait, move on immediately.
+
+✅ 6. Delegation (delegate_to)
+Purpose: Run a task on a different host than the target host.
+🔹 Example:
+- hosts: webservers
+  tasks:
+    - name: Check database from control node
+      command: psql -U admin -h dbserver -c "SELECT 1"
+      delegate_to: localhost
+Another example:
+- hosts: app_servers
+  tasks:
+    - name: Run a command on jump server
+      shell: echo "Running on jump box"
+      delegate_to: jumpserver
+
+✅ 7. Local Actions
+Purpose: Run a task on the control node, not the target host.
+✅ You can use:
+delegate_to: localhost
+local_action
+🔹 Example (both ways):
+Using local_action:
+- hosts: all
+  tasks:
+    - name: Run local task
+      local_action: shell date
+
+Or using delegate_to:
+- hosts: all
+  tasks:
+    - name: Run local task
+      shell: date
+      delegate_to: localhost
+
+✅ 8. Notify and Handlers
+We already covered this above, but here's a quick recap:
+🔹 notify: Used inside tasks to trigger a handler when the task changes something.
+🔹 handlers: Special tasks that only run when notified.
+Realistic Example:
+- hosts: web
+  tasks:
+    - name: Update nginx config
+      copy:
+        src: nginx.conf
+        dest: /etc/nginx/nginx.conf
+      notify: Reload nginx
+
+  handlers:
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+📝 Summary Table
+| Feature        | Purpose                                | Example Usage                              |
+| -------------- | -------------------------------------- | ------------------------------------------ |
+| Tags           | Run selected tasks                     | `--tags`, `--skip-tags`                    |
+| Blocks         | Group tasks and support error handling | `block`, `rescue`, `always`                |
+| Handlers       | React to task changes                  | `notify`, `handlers`                       |
+| Error Handling | Recover from failed tasks              | `rescue`, `always`                         |
+| Async Tasks    | Run long tasks in background           | `async`, `poll: 0`                         |
+| Delegate To    | Run task on another host               | `delegate_to: dbserver`                    |
+| Local Actions  | Run task on control node               | `local_action` or `delegate_to: localhost` |
+
+📊 16. Ansible Tower / AWX
+Ansible Tower (commercial by Red Hat) 
+and AWX (its upstream open-source project) provide a web-based UI and REST API for managing Ansible automation at scale.
+🌐 1. Web UI for Managing Playbooks
+Purpose: Run and manage playbooks, inventories, credentials, and jobs via a user-friendly browser interface.
+Features:
+Dashboard: See job status, hosts, inventories.
+Visual Playbook Runs: Real-time status, logs.
+Launch playbooks with one click.
+Monitor and re-run failed jobs.
+
+🔹 Example Workflow:
+Login to AWX/Tower
+Create a Project linked to Git repo
+Create Inventory with hosts
+Add Credentials (SSH, Vault, cloud, etc.)
+Create a Job Template to run a playbook
+Launch it via UI
+
+👥 2. RBAC (Role-Based Access Control)
+Purpose: Define who can do what—limit access based on roles (viewer, operator, admin, etc.)
+🔹 Built-in Roles:
+Admin: Full access.
+Execute: Can only launch jobs.
+Update: Can modify inventory/projects.
+Read-only: View jobs but can’t execute.
+
+🔹 Example Use Case:
+DevOps team can launch jobs
+Developers can view logs
+Admins can edit playbooks, credentials
+🔹 Set Roles:
+Go to Access tab → Add User → Choose Role (e.g., Execute)
+
+📦 3. Job Templates
+Purpose: Define what playbook to run, on which hosts, with which credentials — all in one reusable object.
+🔹 Job Template includes:
+Name
+Inventory
+Project (Git URL)
+Playbook
+Credentials
+Extra Variables
+Survey (optional)
+🔹 Example:
+Create a Job Template:
+Name: Install Apache
+Inventory: Production
+Project: GitRepo-Playbooks
+Playbook: apache_install.yml
+Credential: SSH-Key
+Then click Launch to run.
+
+⏰ 4. Scheduling Jobs
+Purpose: Automate job execution on a schedule (like cron).
+🔹 Use Cases:
+Daily backups
+Weekly patch updates
+Monthly compliance checks
+🔹 How to Set Up:
+Go to a Job Template
+Click Schedules tab → Add
+Choose Time/Date, Repeat Pattern
+Save
+🔹 Example: Schedule Patch Update job every Sunday at 2 AM.
+
+📝 5. Surveys
+Purpose: Prompt user input (forms) before job execution — helpful for non-technical users.
+🔹 Use Case:
+Instead of hardcoding variables, let users enter:
+Target hostname
+Package name
+Service name
+🔹 How to Use:
+Go to Job Template → Add Survey
+Define Questions:
+Type (text, multiple choice, etc.)
+Default values
+Required or optional
+Save and enable
+🔹 Example Survey for Apache Install:
+| Question       | Default | Required |
+| -------------- | ------- | -------- |
+| `package_name` | httpd   | Yes      |
+| `service_name` | httpd   | Yes      |
+
+🔹 In Playbook:
+- name: Install package
+  yum:
+    name: "{{ package_name }}"
+    state: present
+
+- name: Start service
+  service:
+    name: "{{ service_name }}"
+    state: started
+🔹 During launch, the UI will prompt the user for package_name and service_name.
+
+🔐 Bonus: Credentials Management
+Tower/AWX supports:
+SSH keys
+Vault passwords
+AWS/Cloud credentials
+Git credentials
+✅ Encrypted and safely stored. No need to share secrets in playbooks.
+
+📎 Summary Table
+| Feature           | Description                               | Example                                             |
+| ----------------- | ----------------------------------------- | --------------------------------------------------- |
+| **Web UI**        | Visual management of playbooks            | Run and monitor jobs, view logs                     |
+| **RBAC**          | Control user permissions                  | Viewer, Operator, Admin                             |
+| **Job Templates** | Predefined playbook jobs with config      | Template for “Install Apache”                       |
+| **Scheduling**    | Automate job execution on schedule        | Run “Backup” playbook daily at 1 AM                 |
+| **Surveys**       | Collect user inputs for dynamic variables | Ask for package/service name before running the job |
+
+🧪 17. Testing and Debugging in Ansible
+Testing and debugging are critical in Ansible to ensure your playbooks are working before they make real changes.
+✅ 1. --check: Dry Run Mode
+Purpose: Simulate the changes without actually applying them.
+🧪 Example:
+# ansible-playbook site.yml --check
+🔍 Output:
+Shows what would change.
+Doesn’t actually make any changes.
+📌 Limitation: Only supported by idempotent modules like yum, copy, template, etc.
+
+✅ 2. --diff: Show File Differences
+Purpose: Show differences between existing and new content, especially with template or copy.
+🧪 Example:
+# ansible-playbook config.yml --check --diff
+🔍 Output:
+Shows line-by-line diff of changed files.
+
+✅ 3. --syntax-check: Verify Syntax Only
+Purpose: Check for syntax errors in the playbook without running anything.
+🧪 Example:
+# ansible-playbook site.yml --syntax-check
+📌 Useful in CI/CD pipelines to fail early.
+
+✅ 4. -vvv: Verbose Mode
+Purpose: Increase verbosity to see more output details.
+🧪 Levels:
+-v: Basic info
+-vv: Module arguments
+-vvv: SSH and task-level details
+-vvvv: Full connection debug
+🧪 Example:
+# ansible-playbook site.yml -vvv
+
+✅ 5. debug Module
+Purpose: Print variable values or messages.
+🔹 Example: Print a variable
+- hosts: all
+  vars:
+    username: "rakesh"
+  tasks:
+    - debug:
+        msg: "User is {{ username }}"
+🔹 Example: Print full variable structure
+- debug:
+    var: ansible_facts
+🔹 Example: Conditional debug
+- debug:
+    msg: "This runs only if x is true"
+  when: x is defined and x == true
+
+✅ 6. assert Module
+Purpose: Enforce validation checks on variable values or task outputs.
+🔹 Example: Simple assertion
+- hosts: all
+  vars:
+    os_type: "linux"
+  tasks:
+    - name: Ensure OS is Linux
+      assert:
+        that:
+          - os_type == "linux"
+🔹 Example: Multiple assertions
+- name: Check memory and CPU
+  assert:
+    that:
+      - ansible_memtotal_mb >= 1024
+      - ansible_processor_cores >= 2
+    fail_msg: "System does not meet minimum requirements"
+    success_msg: "System checks passed"
+
+🧪 Useful in:
+Pre-flight checks
+Guarding against misconfiguration
+Validating survey inputs in Tower/AWX
+
+📝 Summary Table
+| Feature          | Use Case                          | Command / Module                           |
+| ---------------- | --------------------------------- | ------------------------------------------ |
+| `--check`        | Dry-run mode                      | `ansible-playbook site.yml --check`        |
+| `--diff`         | Show file diffs                   | `ansible-playbook site.yml --diff`         |
+| `--syntax-check` | Syntax validation only            | `ansible-playbook site.yml --syntax-check` |
+| `-vvv`           | Verbose output                    | `ansible-playbook site.yml -vvv`           |
+| `debug` module   | Print variable values or messages | `debug: var=myvar`, `debug: msg=...`       |
+| `assert` module  | Validate variable conditions      | `assert: that: [condition1, condition2]`   |
+
+🚀 Real-World Testing Flow
+✅ Syntax Check
+# ansible-playbook deploy.yml --syntax-check
+🧪 Dry Run + Diff
+# ansible-playbook deploy.yml --check --diff
+🔍 Verbose Execution
+# ansible-playbook deploy.yml -vvv
+🐛 Add Debugs / Asserts for critical variables
+- debug: var=env_name
+- assert: that: env_name in ['dev', 'prod']
+
+🛡️ 18. Ansible Best Practices
+Following best practices ensures scalability, security, and ease of maintenance in your Ansible projects.
+📁 1. Directory Structure (Recommended Layout)
+A clean directory layout improves readability and modularity.
+ansible-project/
+├── inventories/
+│   ├── production/
+│   │   ├── hosts
+│   │   └── group_vars/
+│   │       └── all.yml
+│   └── staging/
+│       ├── hosts
+│       └── group_vars/
+│           └── all.yml
+├── roles/
+│   ├── webserver/
+│   │   ├── tasks/
+│   │   ├── handlers/
+│   │   ├── templates/
+│   │   ├── files/
+│   │   ├── defaults/
+│   │   ├── vars/
+│   │   └── meta/
+├── group_vars/
+│   └── all.yml
+├── host_vars/
+│   └── web1.yml
+├── site.yml
+├── README.md
+✅ This structure:
+Supports multiple environments
+Keeps variables organized
+Follows Ansible Galaxy standards
+
+🎭 2. Use Roles
+Roles allow you to reuse and share code easily.
+Create a role:
+# ansible-galaxy init roles/nginx
+Example Usage:
+# site.yml
+- hosts: webservers
+  roles:
+    - nginx
+
+Each role contains:
+tasks/: Main task logic
+handlers/: Handlers triggered by notify
+templates/: Jinja2 template files
+files/: Static files
+defaults/, vars/: Variable definitions
+meta/: Dependencies and metadata
+
+📦 3. Keep Inventory Separate
+Why?
+Better organization
+Support for multiple environments
+Easier for CI/CD pipelines
+📁 Structure:
+inventories/
+├── production/hosts
+├── staging/hosts
+🧪 Run playbook with a specific inventory:
+# ansible-playbook -i inventories/production/hosts site.yml
+
+📂 4. Use group_vars/ and host_vars/
+Purpose: Set variables per group or host automatically without passing with -e.
+📁 Example:
+group_vars/
+├── all.yml           # applies to all hosts
+├── webservers.yml    # only for 'webservers' group
+
+host_vars/
+├── web1.yml          # applies only to host 'web1'
+🔹 group_vars/webservers.yml
+nginx_port: 8080
+🔹 host_vars/web1.yml
+nginx_port: 9090
+🎯 Automatically loaded by Ansible — no extra flags needed.
+
+🔐 5. Encrypt Secrets with Ansible Vault
+Why?
+Keep secrets like passwords, API keys, and tokens encrypted in Git.
+🔐 Create an encrypted file:
+# ansible-vault create secrets.yml
+🔐 Edit encrypted file:
+# ansible-vault edit secrets.yml
+🔐 Encrypt existing file:
+# ansible-vault encrypt credentials.yml
+🔐 Decrypt for viewing:
+# ansible-vault view credentials.yml
+🔐 Run playbook using Vault password:
+# ansible-playbook site.yml --ask-vault-pass
+🔐 Or using a password file:
+# ansible-playbook site.yml --vault-password-file ~/.vault_pass.txt
+🔹 Example encrypted variable file:
+# secrets.yml (encrypted)
+db_password: SuperSecret123
+🔹 Usage in playbook:
+- name: Configure DB
+  vars_files:
+    - secrets.yml
+  tasks:
+    - name: Print DB password
+      debug:
+        msg: "DB Password is {{ db_password }}"
+
+✅ Summary of Best Practices
+| Practice                        | Description                                       | Example / Command                  |
+| ------------------------------- | ------------------------------------------------- | ---------------------------------- |
+| 📁 Directory Structure          | Follow standard Ansible layout                    | `ansible-project/roles/...`        |
+| 🎭 Use Roles                    | Reusable automation components                    | `roles/nginx/tasks/main.yml`       |
+| 📦 Keep Inventory Separate      | Manage multiple environments                      | `inventories/production/hosts`     |
+| 📂 Use group\_vars / host\_vars | Automatically assign variables to groups or hosts | `group_vars/webservers.yml`        |
+| 🔐 Encrypt Secrets (Vault)      | Secure sensitive information                      | `ansible-vault create secrets.yml` |
+
+🧑‍💻 19. Ansible Use Cases / Projects
+✅ 1. Provisioning
+Provision new servers — install packages, create users, manage services.
+🔹 Example: Install Apache & Create a user
+- hosts: web
+  become: yes
+  tasks:
+    - name: Install Apache
+      package:
+        name: httpd
+        state: present
+
+    - name: Create a user
+      user:
+        name: devuser
+        shell: /bin/bash
+
+    - name: Start Apache
+      service:
+        name: httpd
+        state: started
+        enabled: true
+🔧 Use case: Provision new EC2/VMs with required software and users.
+
+🚀 2. Application Deployment
+Deploy apps using git, copy, template, or even with Docker/K8s modules.
+🔹 Example: Deploy a Node.js app
+- hosts: app
+  become: yes
+  tasks:
+    - name: Install dependencies
+      apt:
+        name: [nodejs, npm]
+        state: present
+        update_cache: yes
+
+    - name: Clone app code
+      git:
+        repo: 'https://github.com/example/node-app.git'
+        dest: /var/www/node-app
+
+    - name: Install app dependencies
+      npm:
+        path: /var/www/node-app
+
+    - name: Start app using PM2
+      shell: pm2 start app.js
+🔧 Use case: Automate deployments across test/staging/production environments.
+
+⚙️ 3. Configuration Management
+Ensure consistent system configurations: file templates, sysctl, ssh config, etc.
+🔹 Example: Configure SSH settings
+- hosts: all
+  become: yes
+  tasks:
+    - name: Harden SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted
+🔧 Use case: Enforce consistent config across fleet (e.g., disabling root SSH login).
+
+🔄 4. CI/CD Integration
+Use Ansible in CI/CD tools like Jenkins, GitLab CI, or GitHub Actions to deploy automatically.
+🔹 Example: Jenkins pipeline + Ansible
+pipeline {
+  agent any
+  stages {
+    stage('Deploy') {
+      steps {
+        sh 'ansible-playbook -i inventory/production site.yml'
+      }
+    }
+  }
+}
+📦 Playbook example:
+- hosts: web
+  tasks:
+    - name: Pull latest code
+      git:
+        repo: https://github.com/example/webapp.git
+        dest: /var/www/webapp
+        version: master
+🔧 Use case: Automatic deployment after code push.
+
+📊 5. Monitoring Setup
+Deploy Prometheus, Grafana, Nagios, or custom agents (like Telegraf).
+🔹 Example: Install & start Prometheus
+- hosts: monitor
+  become: yes
+  tasks:
+    - name: Create prometheus user
+      user:
+        name: prometheus
+
+    - name: Copy Prometheus binary
+      copy:
+        src: prometheus
+        dest: /usr/local/bin/prometheus
+        mode: '0755'
+
+    - name: Configure systemd service
+      template:
+        src: prometheus.service.j2
+        dest: /etc/systemd/system/prometheus.service
+
+    - name: Start Prometheus
+      systemd:
+        name: prometheus
+        state: started
+        enabled: true
+🔧 Use case: Automatically deploy and configure monitoring tools on all nodes.
+
+🔐 6. Security Hardening
+Enforce security policies like:
+Firewall
+SELinux
+SSH policies
+Unused service removal
+🔹 Example: Basic hardening
+- hosts: all
+  become: yes
+  tasks:
+    - name: Enable UFW and allow SSH
+      ufw:
+        state: enabled
+        rule: allow
+        port: 22
+
+    - name: Disable unused services
+      service:
+        name: telnet
+        state: stopped
+        enabled: no
+
+    - name: Set password policy
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: 'PASS_MAX_DAYS   90'
+🔧 Use case: Meet compliance (CIS, PCI-DSS) using automated playbooks.
+🧩 Summary Table
+| Use Case              | Description                                 | Example Modules Used                      |
+| --------------------- | ------------------------------------------- | ----------------------------------------- |
+| ✅ Provisioning        | Install software, create users              | `package`, `user`, `service`              |
+| 🚀 App Deployment     | Deploy web/app code from Git or archive     | `git`, `copy`, `npm`, `shell`, `docker`   |
+| ⚙️ Config Management  | Standardize OS & app configuration          | `lineinfile`, `template`, `sysctl`        |
+| 🔄 CI/CD Integration  | Integrate with Jenkins, GitLab, etc.        | `git`, `copy`, shell via pipelines        |
+| 📊 Monitoring Setup   | Install Prometheus, Grafana, Telegraf, etc. | `copy`, `template`, `systemd`, `docker_*` |
+| 🔐 Security Hardening | Enforce security policies                   | `ufw`, `selinux`, `service`, `lineinfile` |
+
+Here's a complete Ansible project structure combining all the major use cases (provisioning, app deployment, configuration management, CI/CD, monitoring, security hardening), with:
+
+📁 Standard directory layout
+📦 Roles (one per use case)
+🔐 Vault integration
+📂 Separate inventories
+✅ Example playbook
+
+📁 Recommended Directory Layout
+ansible-infra-project/
+├── inventories/
+│   ├── production/
+│   │   ├── hosts
+│   │   └── group_vars/
+│   │       └── all.yml
+│   └── staging/
+│       ├── hosts
+│       └── group_vars/
+│           └── all.yml
+├── roles/
+│   ├── provision/
+│   ├── deploy/
+│   ├── config/
+│   ├── ci_cd/
+│   ├── monitoring/
+│   └── security/
+├── vault/
+│   └── secrets.yml (encrypted)
+├── site.yml
+├── requirements.yml (optional)
+├── ansible.cfg
+└── README.md
+
+📜 Example: site.yml
+- name: Full Infrastructure Automation
+  hosts: all
+  become: yes
+  vars_files:
+    - vault/secrets.yml
+
+  roles:
+    - role: provision      # Install packages, users
+    - role: deploy         # Deploy apps
+    - role: config         # Config files, system tuning
+    - role: ci_cd          # Git/Jenkins integration
+    - role: monitoring     # Prometheus, Grafana setup
+    - role: security       # Hardening (SSH, firewall, etc.)
+
+🔐 Vault Example (vault/secrets.yml)
+db_password: SuperSecret123
+api_token: "ghp_abcd1234xyz"
+
+# Encrypt it:
+ansible-vault encrypt vault/secrets.yml
+
+📦 Sample Role: roles/provision/tasks/main.yml
+- name: Install base packages
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - vim
+    - git
+    - curl
+
+- name: Create dev user
+  user:
+    name: devops
+    shell: /bin/bash
+
+📂 Sample Inventory: inventories/production/hosts
+[web]
+web1 ansible_host=192.168.1.10
+
+[db]
+db1 ansible_host=192.168.1.20
+
+[monitoring]
+mon1 ansible_host=192.168.1.30
+
+🧩 group_vars Example: group_vars/all.yml
+nginx_port: 8080
+timezone: Asia/Kolkata
