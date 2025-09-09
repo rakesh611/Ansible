@@ -1,0 +1,62 @@
+🔹 What is the ping module?
+
+The ping module is a simple way to check connectivity between the Ansible control node and the managed host.
+
+It:
+✅ Verifies SSH connection.
+✅ Checks if Python is installed and usable on the target host.
+✅ Returns "pong" if successful.
+
+⚠️ It does not ICMP ping like the Linux ping command. Instead, it’s an Ansible-level test.
+
+🔹 Syntax
+- name: Ping hosts
+  ansible.builtin.ping:
+
+🔹 Example 1 – Basic Ping
+- name: Test connectivity with all hosts
+  hosts: all
+  tasks:
+    - name: Ping all servers
+      ansible.builtin.ping:
+
+
+✅ If the connection works, output will be:
+
+ok: [web01] => {
+    "changed": false,
+    "ping": "pong"
+}
+
+🔹 Example 2 – Ping a Specific Host Group
+- name: Ping only web servers
+  hosts: webservers
+  tasks:
+    - name: Ping web servers
+      ansible.builtin.ping:
+
+🔹 Example 3 – Debug with Ping
+- name: Debug ping result
+  hosts: all
+  tasks:
+    - name: Ping and show result
+      ansible.builtin.ping:
+      register: ping_result
+
+    - name: Show ping output
+      ansible.builtin.debug:
+        var: ping_result
+
+
+✅ This stores the result and shows more details.
+
+🔹 When to Use
+
+Before running playbooks on new hosts (sanity check).
+
+In CI/CD pipelines to ensure inventory hosts are reachable.
+
+As part of monitoring or troubleshooting automation.
+
+👉 Pro Tip:
+If ping fails with an error like “/usr/bin/python not found”, install Python on the host (or use raw module to bootstrap Python).
