@@ -1,0 +1,85 @@
+🔹 What is mount_facts?
+
+The mount_facts module collects mount point information (file systems mounted on the host).
+
+It gathers data similar to the Linux command mount or looking at /proc/mounts.
+
+The facts are stored in ansible_facts.mounts.
+
+🔹 Example Output
+
+When you run it, you get structured data like this:
+
+"ansible_facts": {
+  "mounts": [
+    {
+      "mount": "/",
+      "device": "/dev/sda1",
+      "fstype": "ext4",
+      "options": "rw,relatime"
+    },
+    {
+      "mount": "/boot",
+      "device": "/dev/sda2",
+      "fstype": "ext4",
+      "options": "rw,relatime"
+    }
+  ]
+}
+
+🔹 Playbook Examples
+1. Collect and Display Mount Facts
+---
+- name: Gather mount information
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Collect mount facts
+      ansible.builtin.mount_facts:
+
+    - name: Show gathered mount facts
+      ansible.builtin.debug:
+        var: ansible_facts.mounts
+
+
+👉 This will print all mounted file systems for each host.
+
+2. Check if a Specific Filesystem is Mounted
+---
+- name: Check if /boot is mounted
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Collect mount facts
+      ansible.builtin.mount_facts:
+
+    - name: Fail if /boot is not mounted
+      ansible.builtin.fail:
+        msg: "/boot is not mounted!"
+      when: "'/boot' not in (ansible_facts.mounts | map(attribute='mount') | list)"
+
+3. Save Mount Facts to File
+---
+- name: Save mount facts for audit
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Collect mount facts
+      ansible.builtin.mount_facts:
+
+    - name: Write facts to JSON file
+      ansible.builtin.copy:
+        content: "{{ ansible_facts.mounts | to_nice_json }}"
+        dest: "/tmp/mount_facts_{{ inventory_hostname }}.json"
+      delegate_to: localhost
+
+
+👉 This creates JSON reports of mount info for each host on the control node.
+
+🔹 When to Use
+
+✅ Compliance checks (e.g., /boot or /var must be separate partitions).
+
+✅ Storage audits across servers.
+
+✅ Debugging file system mount issues.
